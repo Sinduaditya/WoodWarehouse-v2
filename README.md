@@ -1,10 +1,11 @@
 # Wood Warehouse
 
 ## Overview
-Wood Warehouse is a comprehensive warehouse management system that connects wood suppliers with buyers, streamlining the processes of inventory management, ordering, payment, and delivery. The platform provides an efficient end-to-end solution for the timber industry.
+Wood Warehouse adalah sistem manajemen gudang komprehensif yang menghubungkan pemasok kayu dengan pembeli, merampingkan proses manajemen inventaris, pemesanan, pembayaran, dan pengiriman. Platform ini menyediakan solusi menyeluruh yang efisien untuk industri kayu.
+
 
 ## 🌲 Project Description
-Wood Warehouse serves as a central platform that bridges the gap between wood suppliers and buyers. The system handles the complete business flow from inventory management to delivery tracking, offering specialized features for all stakeholders including suppliers, warehouse administrators, logistics personnel, finance administrators, and customers.
+Wood Warehouse  berfungsi sebagai platform pusat yang menjembatani kesenjangan antara pemasok kayu dan pembeli. Sistem ini menangani alur bisnis lengkap mulai dari manajemen inventaris hingga pelacakan pengiriman, menawarkan fitur-fitur khusus untuk semua pemangku kepentingan termasuk pemasok, administrator gudang, personel logistik, administrator keuangan, dan pelanggan.
 
 ## 👥 Tim Pengembang
 - Raina Aqila Zahrie (24/554310/NPA/19972)
