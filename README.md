@@ -29,11 +29,11 @@ Semua tugas proyek dikelola melalui GitHub Issues, dengan setiap user story dire
 - Prioritas implementasi
 
 ### Stack Pengembangan
-- **Frontend**: [Akan ditentukan]
-- **Backend**: [Akan ditentukan]
-- **Database**: [Akan ditentukan]
-- **Autentikasi**: [Akan ditentukan]
-- **Deployment**: [Akan ditentukan]
+- **Frontend**: Bootstrap
+- **Backend**: Laravel
+- **Database**: MySql
+- **Autentikasi**: JetStream
+- **Deployment**: Niagahoster
 
 
 ## 🔄 Memulai
