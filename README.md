@@ -1,57 +1,74 @@
-# Wood Warehouse
+# Wood Warehouse Management System
 
-## Overview
-Wood Warehouse adalah sistem manajemen gudang komprehensif yang menghubungkan pemasok kayu dengan pembeli, merampingkan proses manajemen inventaris, pemesanan, pembayaran, dan pengiriman. Platform ini menyediakan solusi menyeluruh yang efisien untuk industri kayu.
+Wood Warehouse Management System adalah aplikasi berbasis web yang dikembangkan menggunakan **Streamlit** untuk mengelola inventaris kayu, supplier, pelanggan, dan pesanan dalam gudang.
 
+## 📌 Fitur Utama
+- **Dashboard**: Menampilkan ringkasan data warehouse.
+- **Suppliers**: Mengelola daftar supplier kayu.
+- **Customers**: Menyimpan data pelanggan yang melakukan pemesanan.
+- **Warehouse Stock**: Melacak stok kayu yang tersedia.
+- **Customer Dashboard**: Antarmuka khusus untuk pelanggan yang ingin melakukan pemesanan.
 
-## 🌲 Project Description
-Wood Warehouse  berfungsi sebagai platform pusat yang menjembatani kesenjangan antara pemasok kayu dan pembeli. Sistem ini menangani alur bisnis lengkap mulai dari manajemen inventaris hingga pelacakan pengiriman, menawarkan fitur-fitur khusus untuk semua pemangku kepentingan termasuk pemasok, administrator gudang, personel logistik, administrator keuangan, dan pelanggan.
-
-## 👥 Tim Pengembang
-- Raina Aqila Zahrie (24/554310/NPA/19972)
-- Jovan Santosa (24/554311/NPA/19973)
-- Destyasti Sri Puspito Widi (24/554312/NPA/19974)
-- Sindu Aditya Janadi (24/554314/NPA/19976)
-
-## 🛠️ Implementasi Teknis
-
-### Pendekatan User Stories
-Proyek ini distruktur menggunakan pendekatan hierarkis:
-- **Initiative**: Wood Warehouse - Visi proyek secara keseluruhan
-- **Epics**: Area fungsional utama (7 epics total)
-- **User Stories**: Fitur spesifik dari perspektif pengguna (14 stories total)
-
-### Implementasi GitHub
-Semua tugas proyek dikelola melalui GitHub Issues, dengan setiap user story direpresentasikan sebagai issue yang berisi:
-- Deskripsi fungsionalitas
-- Kriteria penerimaan
-- Catatan teknis
-- Prioritas implementasi
-
-### Stack Pengembangan
-- **Frontend**: Bootstrap
-- **Backend**: Laravel
-- **Database**: MySql
-- **Autentikasi**: JetStream
-- **Deployment**: Niagahoster
-
-
-## 🔄 Memulai
-
-### Instalasi
+## 🚀 Instalasi
+1. **Clone Repository**
 ```bash
-# Clone repositori
-git clone https://github.com/Sinduaditya/WoodWarehouse-v2.git
-
-# Pindah ke direktori proyek
-cd WoodWarehouse-v2
-
-# Instal dependensi
-npm install
-
-# Mulai server pengembangan
-npm start
+   git clone <https://github.com/Sinduaditya/wood_warehouse.git>
+   cd wood_warehouse
+```
+2. **Buat Virtual Environment (Opsional, tetapi disarankan)**
+```bash
+   python -m venv venv
+   source venv/bin/activate  # Untuk Mac/Linux
+   venv\Scripts\activate     # Untuk Windows
+```
+3. **Install Dependensi**
+```bash
+   pip install -r requirements.txt
+```
+4. **Jalankan Aplikasi**
+```bash
+   streamlit run app.py
 ```
 
-### Konfigurasi
-[Akan ditambahkan berdasarkan pengaturan lingkungan]
+## 📂 Struktur Direktori
+```
+📁 wood-warehouse-management
+│── 📁 pages
+│   ├── 1_Dashboard.py
+│   ├── 2_Suppliers.py
+│   ├── 3_Customers.py
+│   ├── 5_Warehouse_Stock.py
+|   ├── ( untuk setiap menu selanjutnya, cth: 5_Payments.py) FORMAT WAJIB SAMA.
+│── app.py
+│── config.py
+│── readme.md
+│── requirements.txt
+```
+## 🔐 Auth
+- admin : admin@admin.com 
+    ( pass : sindu )
+- user : nduujanadi51@gmail.com
+    ( pass : sindu )
+
+
+## 🔧 Konfigurasi
+File `config.py` digunakan untuk mengatur parameter koneksi database dan konfigurasi lainnya.
+
+## 🛠 Teknologi yang Digunakan
+- **Python** (Streamlit, PostgreSQL, Pandas)
+- **PostgreSQL** sebagai database backend
+- **Supabase/PostgREST** untuk API database
+
+## 📌 Catatan
+Jika ada kendala terkait **akses menu yang tidak diinginkan**, pastikan untuk menggunakan **Streamlit navigation control**, misalnya dengan **menyembunyikan sidebar tertentu** di dalam `app.py`:
+```python
+import streamlit as st
+st.set_page_config(layout='wide', initial_sidebar_state='collapsed')
+```
+
+## 📝 Lisensi
+Proyek ini bersifat open-source. Silakan gunakan dan modifikasi sesuai kebutuhan.
+
+---
+Selamat mencoba! 🚀
+
