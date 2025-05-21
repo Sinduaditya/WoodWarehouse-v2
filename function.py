@@ -314,7 +314,7 @@ def status_pembayaran():
         return warna.get(val, "")
 
     # Terapkan styling pada kolom "Status Pembayaran"
-    styled_df = df.style.applymap(highlight_status, subset=["Status Pembayaran"])
+    styled_df = df.style.map(highlight_status, subset=["Status Pembayaran"]) 
 
     # Tampilkan tabel
     st.dataframe(styled_df, use_container_width=True)
@@ -1127,11 +1127,15 @@ from datetime import date
 def order_form():
     st.title("🛒 Tambah Pesanan")
 
-    # Cek apakah pengguna sudah login
-    customer_id = st.session_state["user"].get("id")
-    if not customer_id:
+    if "user" not in st.session_state or st.session_state["user"] is None:
         st.error("❌ Gagal mengambil data pelanggan.")
         return
+
+    customer_id = st.session_state["user"].get("id")
+    if not customer_id:
+        st.error("❌ ID pelanggan tidak ditemukan.")
+        return
+    
 
     # Ambil data kayu dan simpan di session_state
     if "wood_options" not in st.session_state or st.button("🔄 Refresh Data"):
