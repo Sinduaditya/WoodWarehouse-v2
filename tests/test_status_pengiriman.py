@@ -17,7 +17,7 @@ def mock_supabase():
         yield mock_supabase
 
 def test_status_pengiriman_user_not_logged_in(mock_session_state):
-    # User belum login
+    # User belum melakukan login
     if "user" in mock_session_state:
         del mock_session_state["user"]
     with patch("streamlit.warning") as mock_warning:
@@ -26,7 +26,7 @@ def test_status_pengiriman_user_not_logged_in(mock_session_state):
         assert "Silakan login terlebih dahulu" in mock_warning.call_args[0][0]
 
 def test_status_pengiriman_no_customer_id(mock_session_state):
-    # User login tapi tidak ada id
+    # User login tapi belum meiliki  id
     mock_session_state["user"] = {}
     with patch("streamlit.error") as mock_error:
         status_pengiriman()
@@ -41,7 +41,7 @@ def test_status_pengiriman_no_shipments(mock_session_state, mock_supabase):
         assert "Anda belum memiliki pengiriman" in mock_info.call_args[0][0]
 
 def test_status_pengiriman_with_shipments(mock_session_state, mock_supabase):
-    # User login, ada pengiriman
+    # User login dan ada pengiriman
     mock_session_state["user"] = {"id": 1}
     shipment_data = [{
         "id": 1,
