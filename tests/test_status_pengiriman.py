@@ -41,7 +41,7 @@ def test_status_pengiriman_no_shipments(mock_session_state, mock_supabase):
         assert "Anda belum memiliki pengiriman" in mock_info.call_args[0][0]
 
 def test_status_pengiriman_with_shipments(mock_session_state, mock_supabase):
-    # User login dan ada pengiriman
+    # User login dan ada pengirimann
     mock_session_state["user"] = {"id": 1}
     shipment_data = [{
         "id": 1,
