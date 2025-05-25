@@ -3,7 +3,6 @@ import os
 import pytest
 from unittest.mock import patch, MagicMock
 
-# Menambahkan path ke sys.path untuk mengimpor modul yang akan diuji
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from function import status_pengiriman  
 
