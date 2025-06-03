@@ -1,4 +1,5 @@
 import bcrypt
+import streamlit as st
 
 def hash_password(password):
     salt = bcrypt.gensalt()
