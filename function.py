@@ -7,6 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import date
 from streamlit_option_menu import option_menu
+import time
 
 def lihat_pesanan_detail():
     st.subheader("📋 Riwayat Pesanan Anda")
@@ -358,9 +359,9 @@ def status_pengiriman():
         "created_at": "Waktu Pengiriman"
     })
 
-    # Format tanggal agar lebih mudah dibaca
-    df["Estimasi Tiba"] = pd.to_datetime(df["Estimasi Tiba"]).dt.strftime("%d %B %Y")
-    df["Waktu Pengiriman"] = pd.to_datetime(df["Waktu Pengiriman"]).dt.strftime("%d %B %Y - %H:%M")
+    # Format tanggal
+    df["Estimasi Tiba"] = pd.to_datetime(df["Estimasi Tiba"], format='ISO8601', errors='coerce').dt.strftime("%d %B %Y")
+    df["Waktu Pengiriman"] = pd.to_datetime(df["Waktu Pengiriman"], format='ISO8601', errors='coerce').dt.strftime("%d %B %Y - %H:%M")
 
     # Pilihan filter status pengiriman
     status_filter = st.selectbox("Filter Status Pengiriman", ["Semua", "In Transit", "Delivered", "Failed"])
@@ -422,14 +423,31 @@ def tampilkan_detail_pesanan(order_id):
 def tampilkan_supplier():
     st.subheader("📦 Daftar Supplier")
 
+    # Pagination setup
+    page_size = 100
+    if "supplier_page" not in st.session_state:
+        st.session_state["supplier_page"] = 0
+
+    offset = st.session_state["supplier_page"] * page_size
+
     # Query untuk mengambil semua data supplier
     response = supabase.table("suppliers")\
         .select("id, name, contact_person, phone, email, address, created_at")\
         .order("created_at", desc=True)\
+        .limit(page_size)\
+        .offset(offset)\
         .execute()
 
     if not response.data:
         st.info("📭 Belum ada data supplier.")
+        # Pagination controls below the message
+        col_prev, col_next = st.columns(2)
+        with col_prev:
+            if st.button("⬅️ Sebelumnya Supplier", key="prev_page_supplier_no_data", disabled=st.session_state["supplier_page"] == 0):
+                st.session_state["supplier_page"] -= 1
+                st.rerun()
+        with col_next:
+             st.button("Selanjutnya ➡️ Supplier", key="next_page_supplier_no_data", disabled=True)
         return
 
     # Konversi data ke DataFrame
@@ -447,22 +465,51 @@ def tampilkan_supplier():
     })
 
     # Format tanggal agar lebih mudah dibaca
-    df["Tanggal Ditambahkan"] = pd.to_datetime(df["Tanggal Ditambahkan"], format='ISO8601').dt.strftime("%d %B %Y - %H:%M")
+    df["Tanggal Ditambahkan"] = pd.to_datetime(df["Tanggal Ditambahkan"], format='ISO8601', errors='coerce').dt.strftime("%d %B %Y - %H:%M")
     df.set_index("ID Supplier", inplace=True)
     # Tampilkan tabel
     st.dataframe(df, use_container_width=True)
 
+    # Add pagination controls below the table
+    col_prev, col_next = st.columns(2)
+    with col_prev:
+        if st.button("⬅️ Sebelumnya Supplier", key="prev_page_supplier", disabled=st.session_state["supplier_page"] == 0):
+            st.session_state["supplier_page"] -= 1
+            st.rerun()
+    with col_next:
+         is_last_page = len(df) < page_size
+         if st.button("Selanjutnya ➡️ Supplier", key="next_page_supplier", disabled=is_last_page):
+             st.session_state["supplier_page"] += 1
+             st.rerun()
+
 def tampilkan_jenis_kayu():
     st.subheader("🪵 Daftar Jenis Kayu")
+
+    # Pagination setup
+    page_size = 100
+    if "jenis_kayu_page" not in st.session_state:
+        st.session_state["jenis_kayu_page"] = 0
+
+    offset = st.session_state["jenis_kayu_page"] * page_size
 
     # Query untuk mengambil semua jenis kayu
     response = supabase.table("wood_types")\
         .select("id, wood_name, category, description, created_at")\
         .order("created_at", desc=True)\
+        .limit(page_size)\
+        .offset(offset)\
         .execute()
 
     if not response.data:
         st.info("📭 Belum ada data jenis kayu.")
+        # Pagination controls below the message
+        col_prev, col_next = st.columns(2)
+        with col_prev:
+            if st.button("⬅️ Sebelumnya Jenis Kayu", key="prev_page_jenis_kayu_no_data", disabled=st.session_state["jenis_kayu_page"] == 0):
+                st.session_state["jenis_kayu_page"] -= 1
+                st.rerun()
+        with col_next:
+             st.button("Selanjutnya ➡️ Jenis Kayu", key="next_page_jenis_kayu_no_data", disabled=True)
         return
 
     # Konversi data ke DataFrame
@@ -478,7 +525,7 @@ def tampilkan_jenis_kayu():
     })
 
     # Format tanggal agar lebih mudah dibaca
-    df["Tanggal Ditambahkan"] = pd.to_datetime(df["Tanggal Ditambahkan"], format='ISO8601').dt.strftime("%d %B %Y - %H:%M")
+    df["Tanggal Ditambahkan"] = pd.to_datetime(df["Tanggal Ditambahkan"], format='ISO8601', errors='coerce').dt.strftime("%d %B %Y - %H:%M")
 
     # Mapping kategori kayu dengan emoji
     kategori_emoji = {
@@ -498,18 +545,48 @@ def tampilkan_jenis_kayu():
 
     if df.empty:
         st.info("📭 Tidak ada jenis kayu dengan kategori tersebut.")
+        # Pagination controls below the message even if no data
+        col_prev, col_next = st.columns(2)
+        with col_prev:
+            if st.button("⬅️ Sebelumnya Jenis Kayu Filtered", key="prev_page_jenis_kayu_filtered_no_data", disabled=st.session_state["jenis_kayu_page"] == 0):
+                st.session_state["jenis_kayu_page"] -= 1
+                st.rerun()
+        with col_next:
+             st.button("Selanjutnya ➡️ Jenis Kayu Filtered", key="next_page_jenis_kayu_filtered_no_data", disabled=True)
+
         return
 
     # Tampilkan tabel
     st.dataframe(df, use_container_width=True)
 
+    # Add pagination controls below the table
+    col_prev, col_next = st.columns(2)
+    with col_prev:
+        if st.button("⬅️ Sebelumnya Jenis Kayu", key="prev_page_jenis_kayu", disabled=st.session_state["jenis_kayu_page"] == 0):
+            st.session_state["jenis_kayu_page"] -= 1
+            st.rerun()
+    with col_next:
+         is_last_page = len(df) < page_size
+         if st.button("Selanjutnya ➡️ Jenis Kayu", key="next_page_jenis_kayu", disabled=is_last_page):
+             st.session_state["jenis_kayu_page"] += 1
+             st.rerun()
+
 def tampilkan_stok_gudang():    
     st.subheader("🏢 Stok Gudang")
+
+    # Pagination setup
+    page_size = 100
+    if "stock_gudang_page" not in st.session_state:
+        st.session_state["stock_gudang_page"] = 0
+
+    offset = st.session_state["stock_gudang_page"] * page_size
 
     # Query untuk mengambil data stok dengan join ke tabel kayu dan supplier
     response = supabase.table("warehouse_stock")\
         .select("id, wood_types!inner(wood_name, category), suppliers!inner(name), quantity, unit, price_per_unit, received_date, status, created_at")\
-        .order("created_at", desc=True)\
+        .order("id", desc=False)\
+        .limit(page_size)\
+        .offset(offset)\
         .execute()
 
     if not response.data:
@@ -554,51 +631,84 @@ def tampilkan_stok_gudang():
         st.info("📭 Tidak ada stok dengan status tersebut.")
         return
 
-    # Tampilkan tabel dengan styling
-    st.dataframe(
-        df.style.format({
-            "Harga per Unit": "Rp {:,.2f}".format
-        }).background_gradient(cmap="Blues", subset=["Jumlah"]),
-        use_container_width=True
-    )
+    # Define columns for the table header
+    col_widths = [1, 3, 2, 3, 1.5, 1, 2, 2, 1.5, 2, 1.5] # Adjust widths as needed
+    cols = st.columns(col_widths)
 
-    # Tambahkan tombol edit untuk setiap baris
+    # Display header row
+    headers = ["ID Stok", "Nama Kayu", "Kategori", "Nama Supplier", "Jumlah", "Satuan", "Harga per Unit", "Tanggal Diterima", "Status", "Tanggal Ditambahkan", "Aksi"]
+    for col, header in zip(cols, headers):
+        col.markdown(f"**{header}**") # Make header bold
+
+    st.markdown("---") # Add a separator after the header
+
+    # Display data rows with edit button
     for index, row in df.iterrows():
-        if st.button(f"✏️ Edit Stok ID: {index}", key=f"edit_button_{index}"):
-            with st.container():
-                st.write(f"### 🛠️ Edit Detail Stok ID: {index}")
-                with st.form(f"edit_form_{index}"):
-                    new_quantity = st.number_input("Jumlah", value=row["Jumlah"], min_value=0, step=1, key=f"quantity_{index}")
-                    new_unit = st.text_input("Satuan", value=row["Satuan"], key=f"unit_{index}")
-                    new_price_per_unit = st.number_input("Harga per Unit", value=row["Harga per Unit"], min_value=0.0, step=0.01, key=f"price_{index}")
-                    new_status = st.selectbox("Status", ["Available", "Reserved", "Sold"], index=["Available", "Reserved", "Sold"].index(row["Status"]), key=f"status_{index}")
-                    submitted = st.form_submit_button("💾 Simpan Perubahan")
+        row_cols = st.columns(col_widths)
+        row_cols[0].write(index) # ID Stok
+        row_cols[1].write(row["Nama Kayu"])
+        row_cols[2].write(row["Kategori"])
+        row_cols[3].write(row["Nama Supplier"])
+        row_cols[4].write(row["Jumlah"])
+        row_cols[5].write(row["Satuan"])
+        row_cols[6].write(f"Rp {row['Harga per Unit']:,}".replace(",", ".")) # Format price
+        row_cols[7].write(row["Tanggal Diterima"])
+        row_cols[8].write(row["Status"])
+        row_cols[9].write(row["Tanggal Ditambahkan"])
 
-                    if submitted:
-                        try:
-                            # Update data di Supabase
-                            supabase.table("warehouse_stock").update({
-                                "quantity": new_quantity,
-                                "unit": new_unit,
-                                "price_per_unit": new_price_per_unit,
-                                "status": new_status
-                            }).eq("id", index).execute()
-                            st.success(f"✅ Stok ID {index} berhasil diperbarui!")
-                            st.experimental_rerun()  # Refresh halaman
-                        except Exception as e:
-                            st.error(f"❌ Terjadi kesalahan: {e}")
+        # Add Edit button in the last column
+        with row_cols[10]:
+            if st.button("✏️ Edit", key=f"edit_button_{index}"):
+                st.session_state["edit_stock_id"] = index
+                st.rerun()
+
+    # Add pagination controls
+    col_prev, col_next = st.columns(2)
+    with col_prev:
+        if st.button("⬅️ Sebelumnya", disabled=st.session_state["stock_gudang_page"] == 0):
+            st.session_state["stock_gudang_page"] -= 1
+            st.rerun()
+    with col_next:
+        # Check if the number of returned rows is less than page_size
+        if len(df) < page_size:
+             st.button("Selanjutnya ➡️", disabled=True)
+        else:
+             if st.button("Selanjutnya ➡️"):
+                 st.session_state["stock_gudang_page"] += 1
+                 st.rerun()
+
+    # Check if we need to show the edit page
+    if "edit_stock_id" in st.session_state and st.session_state["edit_stock_id"] is not None:
+        edit_warehouse_stock_page(st.session_state["edit_stock_id"])
 
 def tampilkan_orders():
     st.subheader("📦 Daftar Pesanan (Orders)")
+
+    # Pagination setup
+    page_size = 100
+    if "orders_page" not in st.session_state:
+        st.session_state["orders_page"] = 0
+
+    offset = st.session_state["orders_page"] * page_size
 
     # Query untuk mengambil semua orders dengan customer
     response = supabase.table("orders")\
         .select("id, customer_id, order_date, total_price, status, created_at")\
         .order("created_at", desc=True)\
+        .limit(page_size)\
+        .offset(offset)\
         .execute()
 
     if not response.data:
         st.info("📭 Belum ada data pesanan.")
+        # Pagination controls below the message
+        col_prev, col_next = st.columns(2)
+        with col_prev:
+            if st.button("⬅️ Sebelumnya Orders", key="prev_page_orders_no_data", disabled=st.session_state["orders_page"] == 0):
+                st.session_state["orders_page"] -= 1
+                st.rerun()
+        with col_next:
+             st.button("Selanjutnya ➡️ Orders", key="next_page_orders_no_data", disabled=True)
         return
 
     # Konversi ke DataFrame
@@ -626,22 +736,59 @@ def tampilkan_orders():
 
     if df.empty:
         st.info("📭 Tidak ada pesanan dengan status tersebut.")
+        # Pagination controls below the message even if no data
+        col_prev, col_next = st.columns(2)
+        with col_prev:
+            if st.button("⬅️ Sebelumnya Orders Filtered", key="prev_page_orders_filtered_no_data", disabled=st.session_state["orders_page"] == 0):
+                st.session_state["orders_page"] -= 1
+                st.rerun()
+        with col_next:
+             st.button("Selanjutnya ➡️ Orders Filtered", key="next_page_orders_filtered_no_data", disabled=True)
         return
 
     # Tampilkan tabel
     st.dataframe(df, use_container_width=True)
 
+    # Add pagination controls below the table
+    col_prev, col_next = st.columns(2)
+    with col_prev:
+        if st.button("⬅️ Sebelumnya Orders", key="prev_page_orders", disabled=st.session_state["orders_page"] == 0):
+            st.session_state["orders_page"] -= 1
+            st.rerun()
+    with col_next:
+         is_last_page = len(df) < page_size
+         if st.button("Selanjutnya ➡️ Orders", key="next_page_orders", disabled=is_last_page):
+             st.session_state["orders_page"] += 1
+             st.rerun()
+
 def tampilkan_pembayaran():
     st.subheader("💳 Daftar Pembayaran")
+
+    # Pagination setup
+    page_size = 100
+    if "pembayaran_page" not in st.session_state:
+        st.session_state["pembayaran_page"] = 0
+
+    offset = st.session_state["pembayaran_page"] * page_size
 
     # Query untuk mengambil data pembayaran
     response = supabase.table("payments")\
         .select("id, order_id, payment_method, amount, payment_status, payment_date")\
         .order("payment_date", desc=True)\
+        .limit(page_size)\
+        .offset(offset)\
         .execute()
 
     if not response.data:
         st.info("📭 Belum ada data pembayaran.")
+        # Pagination controls below the message
+        col_prev, col_next = st.columns(2)
+        with col_prev:
+            if st.button("⬅️ Sebelumnya Pembayaran", key="prev_page_pembayaran_no_data", disabled=st.session_state["pembayaran_page"] == 0):
+                st.session_state["pembayaran_page"] -= 1
+                st.rerun()
+        with col_next:
+             st.button("Selanjutnya ➡️ Pembayaran", key="next_page_pembayaran_no_data", disabled=True)
         return
 
     # Konversi ke DataFrame
@@ -658,7 +805,7 @@ def tampilkan_pembayaran():
     })
 
     # Format tanggal
-    df["Tanggal Pembayaran"] = pd.to_datetime(df["Tanggal Pembayaran"]).dt.strftime("%d %B %Y - %H:%M")
+    df["Tanggal Pembayaran"] = pd.to_datetime(df["Tanggal Pembayaran"], errors='coerce').dt.strftime("%d %B %Y - %H:%M")
     df.set_index("ID Pembayaran", inplace=True)
     # Filter status pembayaran
     status_filter = st.selectbox("Filter Status Pembayaran", ["Semua", "Pending", "Completed", "Failed"])
@@ -667,22 +814,59 @@ def tampilkan_pembayaran():
 
     if df.empty:
         st.info("📭 Tidak ada pembayaran dengan status tersebut.")
+        # Pagination controls below the message even if no data
+        col_prev, col_next = st.columns(2)
+        with col_prev:
+            if st.button("⬅️ Sebelumnya Pembayaran Filtered", key="prev_page_pembayaran_filtered_no_data", disabled=st.session_state["pembayaran_page"] == 0):
+                st.session_state["pembayaran_page"] -= 1
+                st.rerun()
+        with col_next:
+             st.button("Selanjutnya ➡️ Pembayaran Filtered", key="next_page_pembayaran_filtered_no_data", disabled=True)
         return
 
     # Tampilkan tabel
     st.dataframe(df, use_container_width=True)
 
+    # Add pagination controls below the table
+    col_prev, col_next = st.columns(2)
+    with col_prev:
+        if st.button("⬅️ Sebelumnya Pembayaran", key="prev_page_pembayaran", disabled=st.session_state["pembayaran_page"] == 0):
+            st.session_state["pembayaran_page"] -= 1
+            st.rerun()
+    with col_next:
+         is_last_page = len(df) < page_size
+         if st.button("Selanjutnya ➡️ Pembayaran", key="next_page_pembayaran", disabled=is_last_page):
+             st.session_state["pembayaran_page"] += 1
+             st.rerun()
+
 def tampilkan_pengiriman():
     st.subheader("🚚 Daftar Pengiriman")
+
+    # Pagination setup
+    page_size = 100
+    if "pengiriman_page" not in st.session_state:
+        st.session_state["pengiriman_page"] = 0
+
+    offset = st.session_state["pengiriman_page"] * page_size
 
     # Query untuk mengambil data shipments
     response = supabase.table("shipments")\
         .select("id, order_id, tracking_number, shipping_company, estimated_delivery, status, created_at")\
         .order("created_at", desc=True)\
+        .limit(page_size)\
+        .offset(offset)\
         .execute()
 
     if not response.data:
         st.info("📭 Belum ada data pengiriman.")
+        # Pagination controls below the message
+        col_prev, col_next = st.columns(2)
+        with col_prev:
+            if st.button("⬅️ Sebelumnya Pengiriman", key="prev_page_pengiriman_no_data", disabled=st.session_state["pengiriman_page"] == 0):
+                st.session_state["pengiriman_page"] -= 1
+                st.rerun()
+        with col_next:
+             st.button("Selanjutnya ➡️ Pengiriman", key="next_page_pengiriman_no_data", disabled=True)
         return
 
     # Konversi ke DataFrame
@@ -700,8 +884,8 @@ def tampilkan_pengiriman():
     })
 
     # Format tanggal
-    df["Estimasi Tiba"] = pd.to_datetime(df["Estimasi Tiba"]).dt.strftime("%d %B %Y")
-    df["Tanggal Ditambahkan"] = pd.to_datetime(df["Tanggal Ditambahkan"]).dt.strftime("%d %B %Y - %H:%M")
+    df["Estimasi Tiba"] = pd.to_datetime(df["Estimasi Tiba"], format='ISO8601', errors='coerce').dt.strftime("%d %B %Y")
+    df["Tanggal Ditambahkan"] = pd.to_datetime(df["Tanggal Ditambahkan"], format='ISO8601', errors='coerce').dt.strftime("%d %B %Y - %H:%M")
     df.set_index("ID Pengiriman", inplace=True)
     # Filter status pengiriman
     status_filter = st.selectbox("Filter Status Pengiriman", ["Semua", "In Transit", "Delivered", "Failed"])
@@ -710,10 +894,30 @@ def tampilkan_pengiriman():
 
     if df.empty:
         st.info("📭 Tidak ada pengiriman dengan status tersebut.")
+        # Pagination controls below the message even if no data
+        col_prev, col_next = st.columns(2)
+        with col_prev:
+            if st.button("⬅️ Sebelumnya Pengiriman Filtered", key="prev_page_pengiriman_filtered_no_data", disabled=st.session_state["pengiriman_page"] == 0):
+                st.session_state["pengiriman_page"] -= 1
+                st.rerun()
+        with col_next:
+             st.button("Selanjutnya ➡️ Pengiriman Filtered", key="next_page_pengiriman_filtered_no_data", disabled=True)
         return
 
     # Tampilkan tabel
     st.dataframe(df, use_container_width=True)
+
+    # Add pagination controls below the table
+    col_prev, col_next = st.columns(2)
+    with col_prev:
+        if st.button("⬅️ Sebelumnya Pengiriman", key="prev_page_pengiriman", disabled=st.session_state["pengiriman_page"] == 0):
+            st.session_state["pengiriman_page"] -= 1
+            st.rerun()
+    with col_next:
+         is_last_page = len(df) < page_size
+         if st.button("Selanjutnya ➡️ Pengiriman", key="next_page_pengiriman", disabled=is_last_page):
+             st.session_state["pengiriman_page"] += 1
+             st.rerun()
 
 def get_category_quantity():
     # Query ke Supabase untuk mendapatkan total quantity berdasarkan kategori kayu
@@ -1050,60 +1254,81 @@ def get_available_wood():
     }
 
 def manajemen_user():
-    st.subheader("👤 Manajemen Pengguna")
+    st.subheader("📋 Manajemen Pengguna")
 
-    # Enhanced user list with search and tabs
-    customers = supabase.table("customers").select("id, name, email, created_at").execute()
+    # Enhanced user list with search
+    search = st.text_input("🔍 Search users by name or email", "")
 
-    if customers.data:
-        # Search filter
-        search = st.text_input("🔍 Search users by name or email", "")
+    # Query to get all users
+    response = supabase.table("customers").select("id, name, email, created_at")\
+        .order("created_at", desc=True)\
+        .execute()
 
+    if response.data:
+        # Apply search filter if search term is provided
         if search:
-            filtered_customers = [c for c in customers.data if search.lower() in c.get('name', '').lower() or 
+            filtered_customers = [c for c in response.data if search.lower() in c.get('name', '').lower() or 
                                  search.lower() in c.get('email', '').lower()]
         else:
-            filtered_customers = customers.data
+            filtered_customers = response.data
 
-        for customer in filtered_customers:
-            st.markdown("---")
-            col1, col2, col3 = st.columns([4, 3, 3])
-            with col1:
-                st.markdown(f"{customer['name']}\n\n📧 {customer['email']}\n\n🆔 ID: {customer['id']}")
-            with col2:
-                with st.expander("✏ Edit"):
-                    new_name = st.text_input(f"Nama Perusahaan - {customer['id']}", value=customer['name'], key=f"name_{customer['id']}")
-                    new_email = st.text_input(f"Email - {customer['id']}", value=customer['email'], key=f"email_{customer['id']}")
-                    if st.button("🔄 Update", key=f"update_{customer['id']}"):
-                        supabase.table("customers").update({"name": new_name, "email": new_email})\
-                            .eq("id", customer['id']).execute()
-                        st.success("✅ Data diperbarui!")
-            with col3:
-                with st.expander("🗑 Hapus"):
-                    confirm = st.checkbox(f"Konfirmasi hapus {customer['name']}", key=f"confirm_{customer['id']}")
-                    if st.button("❌ Hapus", key=f"delete_{customer['id']}") and confirm:
-                        supabase.table("customers").delete().eq("id", customer['id']).execute()
-                        st.success("✅ Pelanggan dihapus.")
+        # Convert filtered data to DataFrame for easier processing
+        df_users = pd.DataFrame(filtered_customers)
 
-            with st.expander("📄 Lihat Riwayat Transaksi"):
-                orders = supabase.table("orders").select("id, order_date, total_price, status").eq("customer_id", customer['id']).execute()
-                if orders.data:
-                    df_orders = pd.DataFrame(orders.data)
-                    df_orders['order_date'] = pd.to_datetime(df_orders['order_date'], format='ISO8601', errors='coerce').dt.strftime("%d %B %Y")
-                    df_orders = df_orders.rename(columns={
-                        "id": "ID Order",
-                        "order_date": "Tanggal Pemesanan",
-                        "total_price": "Total Harga",
-                        "status": "Status"
-                    })
-                    st.dataframe(df_orders, use_container_width=True)
-                else:
-                    st.info("📭 Pelanggan ini belum memiliki transaksi.")
+        if df_users.empty:
+            st.info("📭 Tidak ada pengguna yang ditemukan.")
+            return
 
-        st.markdown(f"*Total Users:* {len(filtered_customers)} (Filtered) / {len(customers.data)} (Total)")
+        # Format date column
+        df_users["created_at"] = pd.to_datetime(df_users["created_at"], format='ISO8601', errors='coerce').dt.strftime("%d %B %Y - %H:%M")
+
+        # Define columns for the table header
+        col_widths = [1, 3, 3, 2, 2] # Adjust widths as needed
+        cols = st.columns(col_widths)
+
+        # Display header row
+        headers = ["ID", "Nama Pengguna", "Email", "Tanggal Ditambahkan", "Aksi"]
+        for col, header in zip(cols, headers):
+            col.markdown(f"**{header}**") # Make header bold
+
+        st.markdown("---") # Add a separator after the header
+
+        # Display data rows with action buttons
+        for index, row in df_users.iterrows():
+            user_id = row["id"]
+            row_cols = st.columns(col_widths)
+            row_cols[0].write(user_id) # ID User
+            row_cols[1].write(row["name"])
+            row_cols[2].write(row["email"])
+            row_cols[3].write(row["created_at"])
+
+            # Add Edit and Delete buttons in the last column
+            with row_cols[4]:
+                col_btns1, col_btns2 = st.columns(2)
+                with col_btns1:
+                    if st.button("✏️", key=f"edit_user_button_{user_id}"):
+                        st.session_state["edit_user_id"] = user_id # Store the ID in session state
+                        st.session_state["action_user"] = "edit"
+                        st.rerun() # Trigger rerun
+                with col_btns2:
+                    if st.button("🗑️", key=f"delete_user_button_{user_id}"):
+                        st.session_state["delete_user_id"] = user_id # Store the ID in session state
+                        st.session_state["action_user"] = "delete"
+                        st.rerun() # Trigger rerun
+
+        # Check if an action is pending before attempting to display form/confirmation
+        # This helps prevent attempting to display multiple UIs in one rerun
+        action_pending = "action_user" in st.session_state and st.session_state["action_user"] is not None
+        
+        # Display edit form or delete confirmation if an action is pending
+        if action_pending:
+            if st.session_state["action_user"] == "edit" and "edit_user_id" in st.session_state:
+                edit_user_page(st.session_state["edit_user_id"])
+            elif st.session_state["action_user"] == "delete" and "delete_user_id" in st.session_state:
+                delete_user_confirmation(st.session_state["delete_user_id"])
 
     else:
-        st.info("No users registered in the system.")
+        st.info("📭 Belum ada pengguna terdaftar.")
 
 # Fungsi untuk menambah pesanan
 def add_order(data):
@@ -1207,4 +1432,155 @@ def order_form():
             update_stock(selected_wood_data['id'], new_stock)
 
             st.success("✅ Pesanan berhasil ditambahkan!")
+
+def edit_user_page(user_id):
+    st.subheader(f"🛠️ Edit Pengguna - ID: {user_id}")
+
+    # Get user data
+    try:
+        response = supabase.table("customers").select("id, name, email").eq("id", user_id).single().execute()
+
+        if response.data:
+            user_to_edit = response.data
+
+            with st.form(f"edit_user_form_{user_id}"):
+                st.write(f"Mengedit Pengguna: **{user_to_edit['name']}**")
+                
+                new_name = st.text_input("Nama Pengguna", value=user_to_edit["name"], key=f"edit_name_{user_id}")
+                new_email = st.text_input("Email", value=user_to_edit["email"], key=f"edit_email_{user_id}")
+                
+                col_form1, col_form2 = st.columns(2)
+                with col_form1:
+                    submitted = st.form_submit_button("💾 Simpan Perubahan")
+                with col_form2:
+                    cancel_button = st.form_submit_button("❌ Batal")
+
+                if submitted:
+                    try:
+                        supabase.table("customers").update({"name": new_name, "email": new_email}).eq("id", user_id).execute()
+                        st.success(f"✅ Pengguna ID {user_id} berhasil diperbarui!")
+                        st.session_state["edit_user_id"] = None
+                        st.session_state["action_user"] = None
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Terjadi kesalahan: {e}")
+                
+                if cancel_button:
+                    st.session_state["edit_user_id"] = None
+                    st.session_state["action_user"] = None
+                    st.rerun()
+
+        else:
+            st.error("Pengguna dengan ID tersebut tidak ditemukan.")
+            st.session_state["edit_user_id"] = None
+            st.session_state["action_user"] = None
+            st.rerun()
+
+    except Exception as e:
+        st.error(f"Terjadi kesalahan saat mengambil data pengguna: {e}")
+        st.session_state["edit_user_id"] = None
+        st.session_state["action_user"] = None
+        st.rerun()
+
+def delete_user_confirmation(user_id):
+    st.subheader(f"⚠️ Hapus Pengguna - ID: {user_id}")
+
+    # Get user data to display name in confirmation
+    try:
+        response = supabase.table("customers").select("name").eq("id", user_id).single().execute()
+        if response.data:
+            user_name = response.data["name"]
+            st.warning(f"Anda yakin ingin menghapus pengguna **{user_name}** (ID: {user_id})?")
+
+            col_btns1, col_btns2 = st.columns(2)
+            with col_btns1:
+                if st.button("✅ Ya, Hapus", key=f"confirm_delete_user_{user_id}"):
+                    try:
+                        supabase.table("customers").delete().eq("id", user_id).execute()
+                        st.success(f"✅ Pengguna ID {user_id} berhasil dihapus!")
+                        st.session_state["delete_user_id"] = None
+                        st.session_state["action_user"] = None
+                        # Ensure other action states are also cleared
+                        if "edit_user_id" in st.session_state: del st.session_state["edit_user_id"]
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Terjadi kesalahan saat menghapus pengguna: {e}")
+            with col_btns2:
+                if st.button("❌ Batal", key=f"cancel_delete_user_{user_id}"):
+                    st.session_state["delete_user_id"] = None
+                    st.session_state["action_user"] = None
+                    # Ensure other action states are also cleared
+                    if "edit_user_id" in st.session_state: del st.session_state["edit_user_id"]
+                    st.rerun()
+        else:
+            st.error("Pengguna dengan ID tersebut tidak ditemukan.")
+            st.session_state["delete_user_id"] = None
+            st.session_state["action_user"] = None
+            # Ensure other action states are also cleared
+            if "edit_user_id" in st.session_state: del st.session_state["edit_user_id"]
+            st.rerun()
+    except Exception as e:
+        st.error(f"Terjadi kesalahan saat mengambil data pengguna untuk konfirmasi hapus: {e}")
+        st.session_state["delete_user_id"] = None
+        st.session_state["action_user"] = None
+        # Ensure other action states are also cleared
+        if "edit_user_id" in st.session_state: del st.session_state["edit_user_id"]
+        st.rerun()
+
+def edit_warehouse_stock_page(stock_id):
+    st.title("✏️ Edit Stok Gudang")
+    
+    # Get stock data
+    response = supabase.table("warehouse_stock")\
+        .select("id, wood_types!inner(wood_name, category), suppliers!inner(name), quantity, unit, price_per_unit, received_date, status")\
+        .eq("id", stock_id)\
+        .execute()
+    
+    if not response.data:
+        st.error("❌ Stok tidak ditemukan")
+        return
+    
+    stock_data = response.data[0]
+    
+    with st.form("edit_stock_form"):
+        st.subheader("Detail Stok")
+        st.write(f"**ID Stok:** {stock_id}")
+        st.write(f"**Jenis Kayu:** {stock_data['wood_types']['wood_name']}")
+        st.write(f"**Kategori:** {stock_data['wood_types']['category']}")
+        st.write(f"**Supplier:** {stock_data['suppliers']['name']}")
+        
+        st.subheader("Edit Informasi")
+        new_quantity = st.number_input("Jumlah", value=int(stock_data['quantity']), min_value=0, step=1)
+        new_unit = st.text_input("Satuan", value=stock_data['unit'])
+        new_price_per_unit = st.number_input("Harga per Unit", value=float(stock_data['price_per_unit']), min_value=0.0, step=0.01)
+        status_options = ["Available", "Reserved", "Sold"]
+        current_status_index = status_options.index(stock_data['status']) if stock_data['status'] in status_options else 0
+        new_status = st.selectbox("Status", status_options, index=current_status_index)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            submit_button = st.form_submit_button("💾 Simpan Perubahan")
+        with col2:
+            cancel_button = st.form_submit_button("❌ Batal")
+        
+        if submit_button:
+            try:
+                # Update data di Supabase
+                supabase.table("warehouse_stock").update({
+                    "quantity": new_quantity,
+                    "unit": new_unit,
+                    "price_per_unit": new_price_per_unit,
+                    "status": new_status
+                }).eq("id", stock_id).execute()
+                
+                st.success("✅ Stok berhasil diperbarui!")
+                time.sleep(1)  # Give user time to see the success message
+                st.session_state["edit_stock_id"] = None
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Terjadi kesalahan: {e}")
+        
+        if cancel_button:
+            st.session_state["edit_stock_id"] = None
+            st.rerun()
 
