@@ -33,3 +33,9 @@ jobs:
     - name: Run tests
       run: |
         pytest tests/
+
+    # Step 5: Linting (Opsional, untuk memastikan kode bersih)
+    - name: Run linter
+      run: |
+        pip install flake8
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
