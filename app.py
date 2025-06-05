@@ -7,7 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import date
 from streamlit_option_menu import option_menu
-from auth import login, register, logout  # impoer dari auth.py
+from auth import login, register, logout  # impoer dari auth.pyimage.png
 from function import lihat_pesanan,lihat_pesanan_detail,status_pembayaran,status_pengiriman,shipment_form,add_shipment,get_suppliers,tambah_supplier,update_stock,tampilkan_stok_gudang,tampilkan_supplier,warehouse_stock_form,add_warehouse_stock,tampilkan_grafik_stok,order_form,add_order,add_order_details,get_orders,tampilkan_orders,tampilkan_detail_pesanan,tambah_kayu,tampilkan_pembayaran,tampilkan_jenis_kayu,tampilkan_pengiriman,manajemen_user
 # Custom theme and styling
 st.set_page_config(
@@ -38,20 +38,19 @@ def dashboard():
         # User profile section
         with st.container():
             st.markdown(f"""
-            <div style="padding: 10px; border-radius: 10px; background-color: rgba(255,255,255,0.1); margin-bottom: 20px">
-                <h3 style="margin:0;">👋 Welcome, {user.get('name', user.get('email', 'User'))}</h3>
-                <p style="opacity:0.8; margin:0; font-size:14px">{role}</p>
+            <div style="padding: 1.5rem; border-radius: 16px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); margin-bottom: 1.5rem">
+                <h3 style="margin:0; color: white; font-size: 1.2rem;">👋 Welcome, {user.get('name', user.get('email', 'User'))}</h3>
+                <p style="opacity:0.9; margin:0.5rem 0 0 0; font-size:0.9rem; color: white;">{role}</p>
             </div>
             """, unsafe_allow_html=True)
     
     # Dashboard header with KPIs
     current_date = datetime.now().strftime("%d %B %Y")
     st.markdown(f"""
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
-        <h1 style="margin: 0;">🌲 Wood Warehouse Dashboard</h1>
-        <p style="color: #888; margin: 0">{current_date}</p>
+    <div style="padding: 2rem; border-radius: 16px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; margin-bottom: 2rem">
+        <h1 style="margin: 0; font-size: 2rem;">🌲 Wood Warehouse Dashboard</h1>
+        <p style="opacity:0.9; margin: 0.5rem 0 0 0;">{current_date}</p>
     </div>
-    <hr>
     """, unsafe_allow_html=True)
 
     if role == "Admin":
@@ -59,62 +58,133 @@ def dashboard():
         with st.sidebar:
             st.markdown("### 📌 Admin Navigation")            
             menu = st.radio("Pilih Menu", [
-            # Inventory Monitoring
-            "Stok Gudang", "Grafik Stock", "Jenis Kayu", "Daftar Supplier",
-            # Data Input
-            "Input Stock Gudang", "Input Jenis Kayu", "Input Supplier",
-            # Order Processing
-            "Orders", "Daftar Pembayaran", "Daftar Pengiriman", "Input Pengiriman",
-            # Administration
-            "Manajemen Pengguna"
-        ])
+                # Inventory Monitoring
+                "Stok Gudang", "Grafik Stock", "Jenis Kayu", "Daftar Supplier",
+                # Data Input
+                "Input Stock Gudang", "Input Jenis Kayu", "Input Supplier",
+                # Order Processing
+                "Daftar Pesanan", "Daftar Pembayaran", "Daftar Pengiriman", "Input Pengiriman",
+                # Administration
+                "Manajemen Pengguna"
+            ])
 
        
         # Display content based on menu selection
         if menu == "Daftar Supplier":
             with st.container():
+                st.markdown("""
+                <div style="padding: 1.5rem; border-radius: 16px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; margin-bottom: 1.5rem">
+                    <h2 style="margin:0; font-size: 1.5rem;">🤝 Supplier Management</h2>
+                    <p style="opacity:0.9; margin:0.5rem 0 0 0">Manage your wood suppliers and their information</p>
+                </div>
+                """, unsafe_allow_html=True)
                 tampilkan_supplier()
         elif menu == "Jenis Kayu":
             with st.container():
+                st.markdown("""
+                <div style="padding: 1.5rem; border-radius: 16px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; margin-bottom: 1.5rem">
+                    <h2 style="margin:0; font-size: 1.5rem;">🌲 Wood Types</h2>
+                    <p style="opacity:0.9; margin:0.5rem 0 0 0">View and manage different types of wood in inventory</p>
+                </div>
+                """, unsafe_allow_html=True)
                 tampilkan_jenis_kayu()
         elif menu == "Stok Gudang":
             with st.container():
+                st.markdown("""
+                <div style="padding: 1.5rem; border-radius: 16px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; margin-bottom: 1.5rem">
+                    <h2 style="margin:0; font-size: 1.5rem;">📦 Warehouse Stock</h2>
+                    <p style="opacity:0.9; margin:0.5rem 0 0 0">Monitor and manage your warehouse inventory</p>
+                </div>
+                """, unsafe_allow_html=True)
                 tampilkan_stok_gudang()
         elif menu == "Daftar Pengiriman":
             with st.container():
+                st.markdown("""
+                <div style="padding: 1.5rem; border-radius: 16px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; margin-bottom: 1.5rem">
+                    <h2 style="margin:0; font-size: 1.5rem;">🚚 Shipments</h2>
+                    <p style="opacity:0.9; margin:0.5rem 0 0 0">Track and manage all shipments</p>
+                </div>
+                """, unsafe_allow_html=True)
                 tampilkan_pengiriman()
         elif menu == "Daftar Pembayaran":
             with st.container():
+                st.markdown("""
+                <div style="padding: 1.5rem; border-radius: 16px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; margin-bottom: 1.5rem">
+                    <h2 style="margin:0; font-size: 1.5rem;">💳 Payments</h2>
+                    <p style="opacity:0.9; margin:0.5rem 0 0 0">View and manage payment records</p>
+                </div>
+                """, unsafe_allow_html=True)
                 tampilkan_pembayaran()
-        elif menu == "Orders":
+        elif menu == "Daftar Pesanan":
             with st.container():
+                st.markdown("""
+                <div style="padding: 1.5rem; border-radius: 16px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; margin-bottom: 1.5rem">
+                    <h2 style="margin:0; font-size: 1.5rem;">📋 Orders</h2>
+                    <p style="opacity:0.9; margin:0.5rem 0 0 0">Manage and track all customer orders</p>
+                </div>
+                """, unsafe_allow_html=True)
                 tampilkan_orders()
         elif menu == "Grafik Stock":
             col1, col2 = st.columns([2, 1])
             with col1:
+                st.markdown("""
+                <div style="padding: 1.5rem; border-radius: 16px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; margin-bottom: 1.5rem">
+                    <h2 style="margin:0; font-size: 1.5rem;">📈 Stock Analytics</h2>
+                    <p style="opacity:0.9; margin:0.5rem 0 0 0">Visualize your warehouse stock data</p>
+                </div>
+                """, unsafe_allow_html=True)
                 tampilkan_grafik_stok()
             with col2:
-                # Quick stats card
                 st.markdown("""
-                <div style="padding: 20px; border-radius: 10px; background-color: #f0f2f6; margin-bottom: 20px">
-                    <h4 style="margin-top:0">📈 Inventory Overview</h4>
-                    <p style="color: #000000;">View your warehouse stock visualization and monitor inventory levels by category.</p>
+                <div style="padding: 1.5rem; border-radius: 16px; background: white; box-shadow: 0 4px 12px var(--shadow-color);">
+                    <h3 style="margin:0; color: var(--text-color);">Stock Overview</h3>
+                    <p style="color: var(--text-color); margin: 0.5rem 0 0 0;">View your warehouse stock visualization and monitor inventory levels by category.</p>
                 </div>
                 """, unsafe_allow_html=True)
         elif menu == "Input Supplier":
             with st.container():
+                st.markdown("""
+                <div style="padding: 1.5rem; border-radius: 16px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; margin-bottom: 1.5rem">
+                    <h2 style="margin:0; font-size: 1.5rem;">➕ Add Supplier</h2>
+                    <p style="opacity:0.9; margin:0.5rem 0 0 0">Add new supplier information to the system</p>
+                </div>
+                """, unsafe_allow_html=True)
                 tambah_supplier()
         elif menu == "Input Jenis Kayu":
             with st.container():
+                st.markdown("""
+                <div style="padding: 1.5rem; border-radius: 16px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; margin-bottom: 1.5rem">
+                    <h2 style="margin:0; font-size: 1.5rem;">➕ Add Wood Type</h2>
+                    <p style="opacity:0.9; margin:0.5rem 0 0 0">Add new wood types to the inventory</p>
+                </div>
+                """, unsafe_allow_html=True)
                 tambah_kayu()
         elif menu == "Input Stock Gudang":
             with st.container():
+                st.markdown("""
+                <div style="padding: 1.5rem; border-radius: 16px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; margin-bottom: 1.5rem">
+                    <h2 style="margin:0; font-size: 1.5rem;">➕ Add Warehouse Stock</h2>
+                    <p style="opacity:0.9; margin:0.5rem 0 0 0">Add new stock to the warehouse inventory</p>
+                </div>
+                """, unsafe_allow_html=True)
                 warehouse_stock_form()
         elif menu == "Input Pengiriman":
             with st.container():
+                st.markdown("""
+                <div style="padding: 1.5rem; border-radius: 16px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; margin-bottom: 1.5rem">
+                    <h2 style="margin:0; font-size: 1.5rem;">➕ Add Shipment</h2>
+                    <p style="opacity:0.9; margin:0.5rem 0 0 0">Create new shipment records</p>
+                </div>
+                """, unsafe_allow_html=True)
                 shipment_form()
         elif menu == "Manajemen Pengguna":
             with st.container():
+                st.markdown("""
+                <div style="padding: 1.5rem; border-radius: 16px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; margin-bottom: 1.5rem">
+                    <h2 style="margin:0; font-size: 1.5rem;">👥 User Management</h2>
+                    <p style="opacity:0.9; margin:0.5rem 0 0 0">Manage system users and their permissions</p>
+                </div>
+                """, unsafe_allow_html=True)
                 manajemen_user()
     else:  # Customer Dashboard
         # Enhanced customer sidebar navigation

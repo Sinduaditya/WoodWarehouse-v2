@@ -365,7 +365,7 @@ def status_pengiriman():
 
     # Pilihan filter status pengiriman
     status_filter = st.selectbox("Filter Status Pengiriman", ["Semua", "In Transit", "Delivered", "Failed"])
-    df.set_index("Order ID", inplace=True)
+    
     # Terapkan filter jika tidak memilih "Semua"
     if status_filter != "Semua":
         df = df[df["Status Pengiriman"] == status_filter]
@@ -386,7 +386,7 @@ def status_pengiriman():
     # Terapkan styling pada kolom "Status Pengiriman"
     styled_df = df.style.applymap(highlight_status, subset=["Status Pengiriman"])
 
-    # Tampilkan tabel
+    # Tampilkan tabel dengan Order ID sebagai kolom biasa
     st.dataframe(styled_df, use_container_width=True)
 
 def tampilkan_detail_pesanan(order_id):
@@ -424,19 +424,32 @@ def tampilkan_supplier():
     st.subheader("📦 Daftar Supplier")
 
     # Pagination setup
-    page_size = 100
+    page_size = 20  # Changed to 20 items per page
     if "supplier_page" not in st.session_state:
         st.session_state["supplier_page"] = 0
 
-    offset = st.session_state["supplier_page"] * page_size
-
-    # Query untuk mengambil semua data supplier
-    response = supabase.table("suppliers")\
-        .select("id, name, contact_person, phone, email, address, created_at")\
-        .order("created_at", desc=True)\
-        .limit(page_size)\
-        .offset(offset)\
+    # Get filter value first
+    supplier_names = ["Semua"]
+    # Get all supplier names for the filter dropdown
+    all_suppliers = supabase.table("suppliers")\
+        .select("name")\
+        .order("name")\
         .execute()
+    supplier_names.extend(sorted([s["name"] for s in all_suppliers.data]))
+    supplier_filter = st.selectbox("Filter Nama Supplier", supplier_names)
+
+    # Build the query with filter
+    query = supabase.table("suppliers")\
+        .select("id, name, contact_person, phone, email, address, created_at")\
+        .order("created_at", desc=True)
+    
+    # Apply filter at database level if not "Semua"
+    if supplier_filter != "Semua":
+        query = query.eq("name", supplier_filter)
+
+    # Add pagination to the filtered query
+    offset = st.session_state["supplier_page"] * page_size
+    response = query.limit(page_size).offset(offset).execute()
 
     if not response.data:
         st.info("📭 Belum ada data supplier.")
@@ -467,10 +480,50 @@ def tampilkan_supplier():
     # Format tanggal agar lebih mudah dibaca
     df["Tanggal Ditambahkan"] = pd.to_datetime(df["Tanggal Ditambahkan"], format='ISO8601', errors='coerce').dt.strftime("%d %B %Y - %H:%M")
     df.set_index("ID Supplier", inplace=True)
-    # Tampilkan tabel
-    st.dataframe(df, use_container_width=True)
 
-    # Add pagination controls below the table
+    # Filter berdasarkan nama supplier
+    supplier_names = ["Semua"] + sorted(df["Nama Supplier"].dropna().unique().tolist())
+    supplier_filter = st.selectbox("Filter Nama Supplier", supplier_names)
+
+    # Apply filter
+    if supplier_filter != "Semua":
+        df = df[df["Nama Supplier"] == supplier_filter]
+
+    if df.empty:
+        st.info("📭 Tidak ada supplier dengan filter yang dipilih.")
+        # Pagination controls below the message even if no data
+        col_prev, col_next = st.columns(2)
+        with col_prev:
+            if st.button("⬅️ Sebelumnya Supplier Filtered", key="prev_page_supplier_filtered_no_data", disabled=st.session_state["supplier_page"] == 0):
+                st.session_state["supplier_page"] -= 1
+                st.rerun()
+        with col_next:
+             st.button("Selanjutnya ➡️ Supplier Filtered", key="next_page_supplier_filtered_no_data", disabled=True)
+        return
+
+    # Define columns for the table header
+    col_widths = [1, 3, 2, 2, 3, 3, 2] # Adjust widths as needed
+    cols = st.columns(col_widths)
+
+    # Display header row
+    headers = ["ID Supplier", "Nama Supplier", "Kontak Person", "Telepon", "Email", "Alamat", "Tanggal Ditambahkan"]
+    for col, header in zip(cols, headers):
+        col.markdown(f"**{header}**") # Make header bold
+
+    st.markdown("---") # Add a separator after the header
+
+    # Display data rows
+    for index, row in df.iterrows():
+        row_cols = st.columns(col_widths)
+        row_cols[0].write(index) # ID Supplier
+        row_cols[1].write(row["Nama Supplier"])
+        row_cols[2].write(row["Kontak Person"])
+        row_cols[3].write(row["Telepon"])
+        row_cols[4].write(row["Email"])
+        row_cols[5].write(row["Alamat"])
+        row_cols[6].write(row["Tanggal Ditambahkan"])
+
+    # Add pagination controls
     col_prev, col_next = st.columns(2)
     with col_prev:
         if st.button("⬅️ Sebelumnya Supplier", key="prev_page_supplier", disabled=st.session_state["supplier_page"] == 0):
@@ -486,7 +539,7 @@ def tampilkan_jenis_kayu():
     st.subheader("🪵 Daftar Jenis Kayu")
 
     # Pagination setup
-    page_size = 100
+    page_size = 20  # Changed to 20 items per page
     if "jenis_kayu_page" not in st.session_state:
         st.session_state["jenis_kayu_page"] = 0
 
@@ -538,13 +591,28 @@ def tampilkan_jenis_kayu():
     # Ganti nilai kategori dengan emoji yang sesuai
     df["Kategori"] = df["Kategori"].map(kategori_emoji)
     df.set_index("ID Kayu", inplace=True)
-    # Tambahkan filter berdasarkan kategori kayu
-    kategori_filter = st.selectbox("Filter Kategori Kayu", ["Semua", "Hardwood", "Softwood", "Plywood", "Others"])
+
+    # Create two columns for filters
+    col1, col2 = st.columns(2)
+    
+    # Filter berdasarkan kategori kayu
+    with col1:
+        kategori_filter = st.selectbox("Filter Kategori Kayu", ["Semua", "Hardwood", "Softwood", "Plywood", "Others"])
+    
+    # Filter berdasarkan deskripsi
+    with col2:
+        # Get unique descriptions and add "Semua" option
+        descriptions = ["Semua"] + sorted(df["Deskripsi"].dropna().unique().tolist())
+        description_filter = st.selectbox("Filter Deskripsi", descriptions)
+
+    # Apply filters
     if kategori_filter != "Semua":
         df = df[df["Kategori"].str.contains(kategori_filter, case=False, na=False)]
+    if description_filter != "Semua":
+        df = df[df["Deskripsi"] == description_filter]
 
     if df.empty:
-        st.info("📭 Tidak ada jenis kayu dengan kategori tersebut.")
+        st.info("📭 Tidak ada jenis kayu dengan filter yang dipilih.")
         # Pagination controls below the message even if no data
         col_prev, col_next = st.columns(2)
         with col_prev:
@@ -553,13 +621,29 @@ def tampilkan_jenis_kayu():
                 st.rerun()
         with col_next:
              st.button("Selanjutnya ➡️ Jenis Kayu Filtered", key="next_page_jenis_kayu_filtered_no_data", disabled=True)
-
         return
 
-    # Tampilkan tabel
-    st.dataframe(df, use_container_width=True)
+    # Define columns for the table header
+    col_widths = [1, 3, 2, 3, 2] # Adjust widths as needed
+    cols = st.columns(col_widths)
 
-    # Add pagination controls below the table
+    # Display header row
+    headers = ["ID Kayu", "Nama Kayu", "Kategori", "Deskripsi", "Tanggal Ditambahkan"]
+    for col, header in zip(cols, headers):
+        col.markdown(f"**{header}**") # Make header bold
+
+    st.markdown("---") # Add a separator after the header
+
+    # Display data rows
+    for index, row in df.iterrows():
+        row_cols = st.columns(col_widths)
+        row_cols[0].write(index) # ID Kayu
+        row_cols[1].write(row["Nama Kayu"])
+        row_cols[2].write(row["Kategori"])
+        row_cols[3].write(row["Deskripsi"])
+        row_cols[4].write(row["Tanggal Ditambahkan"])
+
+    # Add pagination controls
     col_prev, col_next = st.columns(2)
     with col_prev:
         if st.button("⬅️ Sebelumnya Jenis Kayu", key="prev_page_jenis_kayu", disabled=st.session_state["jenis_kayu_page"] == 0):
@@ -574,8 +658,19 @@ def tampilkan_jenis_kayu():
 def tampilkan_stok_gudang():    
     st.subheader("🏢 Stok Gudang")
 
+    # Check if we're in edit mode
+    if "edit_stock_id" in st.session_state and st.session_state["edit_stock_id"] is not None:
+        # Show back button and edit form
+        if st.button("⬅️ Kembali ke Daftar Stok"):
+            st.session_state["edit_stock_id"] = None
+            st.rerun()
+        
+        # Show edit form
+        edit_warehouse_stock_page(st.session_state["edit_stock_id"])
+        return
+
     # Pagination setup
-    page_size = 100
+    page_size = 20  # Changed to 20 items per page
     if "stock_gudang_page" not in st.session_state:
         st.session_state["stock_gudang_page"] = 0
 
@@ -622,13 +717,41 @@ def tampilkan_stok_gudang():
     # Set ID sebagai index
     df.set_index("ID Stok", inplace=True)
 
+    # Create three columns for filters and sorting
+    col1, col2, col3 = st.columns(3)
+    
     # Filter status stok
-    status_filter = st.selectbox("🔍 Filter Status", ["Semua", "Available", "Reserved", "Sold"], key="status_filter")
+    with col1:
+        status_filter = st.selectbox("🔍 Filter Status", ["Semua", "Available", "Reserved", "Sold"], key="status_filter")
+    
+    # Filter kategori
+    with col2:
+        # Get unique categories
+        categories = ["Semua"] + sorted(df["Kategori"].unique().tolist())
+        category_filter = st.selectbox("🌲 Filter Kategori", categories, key="category_filter")
+    
+    # Sort by price
+    with col3:
+        sort_price = st.selectbox(
+            "💰 Urutkan Harga",
+            ["Default", "Tinggi ke Rendah", "Rendah ke Tinggi"],
+            key="sort_price"
+        )
+
+    # Apply filters
     if status_filter != "Semua":
         df = df[df["Status"] == status_filter]
+    if category_filter != "Semua":
+        df = df[df["Kategori"] == category_filter]
+
+    # Apply sorting
+    if sort_price == "Tinggi ke Rendah":
+        df = df.sort_values("Harga per Unit", ascending=False)
+    elif sort_price == "Rendah ke Tinggi":
+        df = df.sort_values("Harga per Unit", ascending=True)
 
     if df.empty:
-        st.info("📭 Tidak ada stok dengan status tersebut.")
+        st.info("📭 Tidak ada stok dengan filter yang dipilih.")
         return
 
     # Define columns for the table header
@@ -677,15 +800,11 @@ def tampilkan_stok_gudang():
                  st.session_state["stock_gudang_page"] += 1
                  st.rerun()
 
-    # Check if we need to show the edit page
-    if "edit_stock_id" in st.session_state and st.session_state["edit_stock_id"] is not None:
-        edit_warehouse_stock_page(st.session_state["edit_stock_id"])
-
 def tampilkan_orders():
     st.subheader("📦 Daftar Pesanan (Orders)")
 
     # Pagination setup
-    page_size = 100
+    page_size = 20  # Changed to 20 items per page
     if "orders_page" not in st.session_state:
         st.session_state["orders_page"] = 0
 
@@ -728,11 +847,40 @@ def tampilkan_orders():
     df["Tanggal Order"] = pd.to_datetime(df["Tanggal Order"], format='mixed', errors='coerce').dt.strftime("%d %B %Y")
     df["Tanggal Ditambahkan"] = pd.to_datetime(df["Tanggal Ditambahkan"], format='mixed', errors='coerce').dt.strftime("%d %B %Y - %H:%M")
 
+    # Format harga
+    df["Total Harga"] = df["Total Harga"].apply(lambda x: f"Rp. {x:,.0f}".replace(",", "."))
+
     df.set_index("ID Order", inplace=True)
+
+    # Create two columns for filters
+    col1, col2 = st.columns(2)
+    
     # Filter status order
-    status_filter = st.selectbox("Filter Status Order", ["Semua", "Pending", "Paid", "Shipped", "Completed", "Cancelled"])
+    with col1:
+        status_filter = st.selectbox("Filter Status Order", ["Semua", "Pending", "Paid", "Shipped", "Completed", "Cancelled"])
+    
+    # Sort by total price
+    with col2:
+        sort_price = st.selectbox(
+            "Urutkan Total Harga",
+            ["Default", "Tinggi ke Rendah", "Rendah ke Tinggi"],
+            key="sort_price"
+        )
+
+    # Apply status filter
     if status_filter != "Semua":
         df = df[df["Status"] == status_filter]
+
+    # Apply price sorting
+    if sort_price != "Default":
+        # Convert price string back to float for sorting
+        df["Total Harga Float"] = df["Total Harga"].str.replace("Rp. ", "").str.replace(".", "").astype(float)
+        if sort_price == "Tinggi ke Rendah":
+            df = df.sort_values("Total Harga Float", ascending=False)
+        else:  # Rendah ke Tinggi
+            df = df.sort_values("Total Harga Float", ascending=True)
+        # Drop the temporary sorting column
+        df = df.drop(columns=["Total Harga Float"])
 
     if df.empty:
         st.info("📭 Tidak ada pesanan dengan status tersebut.")
@@ -746,10 +894,28 @@ def tampilkan_orders():
              st.button("Selanjutnya ➡️ Orders Filtered", key="next_page_orders_filtered_no_data", disabled=True)
         return
 
-    # Tampilkan tabel
-    st.dataframe(df, use_container_width=True)
+    # Define columns for the table header
+    col_widths = [1, 2, 2, 2, 2, 2] # Adjust widths as needed
+    cols = st.columns(col_widths)
 
-    # Add pagination controls below the table
+    # Display header row
+    headers = ["ID Order", "ID Customer", "Tanggal Order", "Total Harga", "Status", "Tanggal Ditambahkan"]
+    for col, header in zip(cols, headers):
+        col.markdown(f"**{header}**") # Make header bold
+
+    st.markdown("---") # Add a separator after the header
+
+    # Display data rows
+    for index, row in df.iterrows():
+        row_cols = st.columns(col_widths)
+        row_cols[0].write(index) # ID Order
+        row_cols[1].write(row["ID Customer"])
+        row_cols[2].write(row["Tanggal Order"])
+        row_cols[3].write(row["Total Harga"])
+        row_cols[4].write(row["Status"])
+        row_cols[5].write(row["Tanggal Ditambahkan"])
+
+    # Add pagination controls
     col_prev, col_next = st.columns(2)
     with col_prev:
         if st.button("⬅️ Sebelumnya Orders", key="prev_page_orders", disabled=st.session_state["orders_page"] == 0):
@@ -765,7 +931,7 @@ def tampilkan_pembayaran():
     st.subheader("💳 Daftar Pembayaran")
 
     # Pagination setup
-    page_size = 100
+    page_size = 20  # Changed to 20 items per page
     if "pembayaran_page" not in st.session_state:
         st.session_state["pembayaran_page"] = 0
 
@@ -806,11 +972,41 @@ def tampilkan_pembayaran():
 
     # Format tanggal
     df["Tanggal Pembayaran"] = pd.to_datetime(df["Tanggal Pembayaran"], errors='coerce').dt.strftime("%d %B %Y - %H:%M")
+
+    # Format jumlah pembayaran
+    df["Jumlah"] = df["Jumlah"].apply(lambda x: f"Rp. {x:,.0f}".replace(",", "."))
+
     df.set_index("ID Pembayaran", inplace=True)
+
+    # Create two columns for filters
+    col1, col2 = st.columns(2)
+    
     # Filter status pembayaran
-    status_filter = st.selectbox("Filter Status Pembayaran", ["Semua", "Pending", "Completed", "Failed"])
+    with col1:
+        status_filter = st.selectbox("Filter Status Pembayaran", ["Semua", "Pending", "Completed", "Failed"])
+    
+    # Sort by payment amount
+    with col2:
+        sort_amount = st.selectbox(
+            "Urutkan Jumlah Pembayaran",
+            ["Default", "Tinggi ke Rendah", "Rendah ke Tinggi"],
+            key="sort_amount"
+        )
+
+    # Apply status filter
     if status_filter != "Semua":
         df = df[df["Status Pembayaran"] == status_filter]
+
+    # Apply amount sorting
+    if sort_amount != "Default":
+        # Convert amount string back to float for sorting
+        df["Jumlah Float"] = df["Jumlah"].str.replace("Rp. ", "").str.replace(".", "").astype(float)
+        if sort_amount == "Tinggi ke Rendah":
+            df = df.sort_values("Jumlah Float", ascending=False)
+        else:  # Rendah ke Tinggi
+            df = df.sort_values("Jumlah Float", ascending=True)
+        # Drop the temporary sorting column
+        df = df.drop(columns=["Jumlah Float"])
 
     if df.empty:
         st.info("📭 Tidak ada pembayaran dengan status tersebut.")
@@ -824,10 +1020,28 @@ def tampilkan_pembayaran():
              st.button("Selanjutnya ➡️ Pembayaran Filtered", key="next_page_pembayaran_filtered_no_data", disabled=True)
         return
 
-    # Tampilkan tabel
-    st.dataframe(df, use_container_width=True)
+    # Define columns for the table header
+    col_widths = [1, 2, 2, 2, 2, 2] # Adjust widths as needed
+    cols = st.columns(col_widths)
 
-    # Add pagination controls below the table
+    # Display header row
+    headers = ["ID Pembayaran", "ID Order", "Metode Pembayaran", "Jumlah", "Status Pembayaran", "Tanggal Pembayaran"]
+    for col, header in zip(cols, headers):
+        col.markdown(f"**{header}**") # Make header bold
+
+    st.markdown("---") # Add a separator after the header
+
+    # Display data rows
+    for index, row in df.iterrows():
+        row_cols = st.columns(col_widths)
+        row_cols[0].write(index) # ID Pembayaran
+        row_cols[1].write(row["ID Order"])
+        row_cols[2].write(row["Metode Pembayaran"])
+        row_cols[3].write(row["Jumlah"])
+        row_cols[4].write(row["Status Pembayaran"])
+        row_cols[5].write(row["Tanggal Pembayaran"])
+
+    # Add pagination controls
     col_prev, col_next = st.columns(2)
     with col_prev:
         if st.button("⬅️ Sebelumnya Pembayaran", key="prev_page_pembayaran", disabled=st.session_state["pembayaran_page"] == 0):
@@ -843,7 +1057,7 @@ def tampilkan_pengiriman():
     st.subheader("🚚 Daftar Pengiriman")
 
     # Pagination setup
-    page_size = 100
+    page_size = 20  # Changed to 20 items per page
     if "pengiriman_page" not in st.session_state:
         st.session_state["pengiriman_page"] = 0
 
@@ -887,13 +1101,28 @@ def tampilkan_pengiriman():
     df["Estimasi Tiba"] = pd.to_datetime(df["Estimasi Tiba"], format='ISO8601', errors='coerce').dt.strftime("%d %B %Y")
     df["Tanggal Ditambahkan"] = pd.to_datetime(df["Tanggal Ditambahkan"], format='ISO8601', errors='coerce').dt.strftime("%d %B %Y - %H:%M")
     df.set_index("ID Pengiriman", inplace=True)
+
+    # Create two columns for filters
+    col1, col2 = st.columns(2)
+    
     # Filter status pengiriman
-    status_filter = st.selectbox("Filter Status Pengiriman", ["Semua", "In Transit", "Delivered", "Failed"])
+    with col1:
+        status_filter = st.selectbox("Filter Status Pengiriman", ["Semua", "In Transit", "Delivered", "Failed"])
+    
+    # Filter perusahaan pengiriman
+    with col2:
+        # Get unique shipping companies and add "Semua" option
+        shipping_companies = ["Semua"] + sorted(df["Perusahaan Pengiriman"].dropna().unique().tolist())
+        company_filter = st.selectbox("Filter Perusahaan Pengiriman", shipping_companies)
+
+    # Apply filters
     if status_filter != "Semua":
         df = df[df["Status"] == status_filter]
+    if company_filter != "Semua":
+        df = df[df["Perusahaan Pengiriman"] == company_filter]
 
     if df.empty:
-        st.info("📭 Tidak ada pengiriman dengan status tersebut.")
+        st.info("📭 Tidak ada pengiriman dengan filter yang dipilih.")
         # Pagination controls below the message even if no data
         col_prev, col_next = st.columns(2)
         with col_prev:
@@ -904,10 +1133,29 @@ def tampilkan_pengiriman():
              st.button("Selanjutnya ➡️ Pengiriman Filtered", key="next_page_pengiriman_filtered_no_data", disabled=True)
         return
 
-    # Tampilkan tabel
-    st.dataframe(df, use_container_width=True)
+    # Define columns for the table header
+    col_widths = [1, 2, 2, 2, 2, 2, 2] # Adjust widths as needed
+    cols = st.columns(col_widths)
 
-    # Add pagination controls below the table
+    # Display header row
+    headers = ["ID Pengiriman", "ID Order", "No. Resi", "Perusahaan Pengiriman", "Estimasi Tiba", "Status", "Tanggal Ditambahkan"]
+    for col, header in zip(cols, headers):
+        col.markdown(f"**{header}**") # Make header bold
+
+    st.markdown("---") # Add a separator after the header
+
+    # Display data rows
+    for index, row in df.iterrows():
+        row_cols = st.columns(col_widths)
+        row_cols[0].write(index) # ID Pengiriman
+        row_cols[1].write(row["ID Order"])
+        row_cols[2].write(row["No. Resi"])
+        row_cols[3].write(row["Perusahaan Pengiriman"])
+        row_cols[4].write(row["Estimasi Tiba"])
+        row_cols[5].write(row["Status"])
+        row_cols[6].write(row["Tanggal Ditambahkan"])
+
+    # Add pagination controls
     col_prev, col_next = st.columns(2)
     with col_prev:
         if st.button("⬅️ Sebelumnya Pengiriman", key="prev_page_pengiriman", disabled=st.session_state["pengiriman_page"] == 0):
@@ -1256,79 +1504,115 @@ def get_available_wood():
 def manajemen_user():
     st.subheader("📋 Manajemen Pengguna")
 
-    # Enhanced user list with search
-    search = st.text_input("🔍 Search users by name or email", "")
+    # Check if we're in edit mode
+    if "edit_user_id" in st.session_state and st.session_state["edit_user_id"] is not None:
+        # Show back button and edit form
+        if st.button("⬅️ Kembali ke Daftar Pengguna"):
+            st.session_state["edit_user_id"] = None
+            st.rerun()
+        
+        # Show edit form
+        edit_user_page(st.session_state["edit_user_id"])
+        return
 
-    # Query to get all users
-    response = supabase.table("customers").select("id, name, email, created_at")\
+    # Pagination setup
+    page_size = 20  # Changed to 20 items per page
+    if "user_page" not in st.session_state:
+        st.session_state["user_page"] = 0
+
+    offset = st.session_state["user_page"] * page_size
+
+    # Query to get users with pagination
+    response = supabase.table("customers")\
+        .select("id, name, email, created_at")\
         .order("created_at", desc=True)\
+        .limit(page_size)\
+        .offset(offset)\
         .execute()
 
-    if response.data:
-        # Apply search filter if search term is provided
-        if search:
-            filtered_customers = [c for c in response.data if search.lower() in c.get('name', '').lower() or 
-                                 search.lower() in c.get('email', '').lower()]
-        else:
-            filtered_customers = response.data
-
-        # Convert filtered data to DataFrame for easier processing
-        df_users = pd.DataFrame(filtered_customers)
-
-        if df_users.empty:
-            st.info("📭 Tidak ada pengguna yang ditemukan.")
-            return
-
-        # Format date column
-        df_users["created_at"] = pd.to_datetime(df_users["created_at"], format='ISO8601', errors='coerce').dt.strftime("%d %B %Y - %H:%M")
-
-        # Define columns for the table header
-        col_widths = [1, 3, 3, 2, 2] # Adjust widths as needed
-        cols = st.columns(col_widths)
-
-        # Display header row
-        headers = ["ID", "Nama Pengguna", "Email", "Tanggal Ditambahkan", "Aksi"]
-        for col, header in zip(cols, headers):
-            col.markdown(f"**{header}**") # Make header bold
-
-        st.markdown("---") # Add a separator after the header
-
-        # Display data rows with action buttons
-        for index, row in df_users.iterrows():
-            user_id = row["id"]
-            row_cols = st.columns(col_widths)
-            row_cols[0].write(user_id) # ID User
-            row_cols[1].write(row["name"])
-            row_cols[2].write(row["email"])
-            row_cols[3].write(row["created_at"])
-
-            # Add Edit and Delete buttons in the last column
-            with row_cols[4]:
-                col_btns1, col_btns2 = st.columns(2)
-                with col_btns1:
-                    if st.button("✏️", key=f"edit_user_button_{user_id}"):
-                        st.session_state["edit_user_id"] = user_id # Store the ID in session state
-                        st.session_state["action_user"] = "edit"
-                        st.rerun() # Trigger rerun
-                with col_btns2:
-                    if st.button("🗑️", key=f"delete_user_button_{user_id}"):
-                        st.session_state["delete_user_id"] = user_id # Store the ID in session state
-                        st.session_state["action_user"] = "delete"
-                        st.rerun() # Trigger rerun
-
-        # Check if an action is pending before attempting to display form/confirmation
-        # This helps prevent attempting to display multiple UIs in one rerun
-        action_pending = "action_user" in st.session_state and st.session_state["action_user"] is not None
-        
-        # Display edit form or delete confirmation if an action is pending
-        if action_pending:
-            if st.session_state["action_user"] == "edit" and "edit_user_id" in st.session_state:
-                edit_user_page(st.session_state["edit_user_id"])
-            elif st.session_state["action_user"] == "delete" and "delete_user_id" in st.session_state:
-                delete_user_confirmation(st.session_state["delete_user_id"])
-
-    else:
+    if not response.data:
         st.info("📭 Belum ada pengguna terdaftar.")
+        # Pagination controls below the message
+        col_prev, col_next = st.columns(2)
+        with col_prev:
+            if st.button("⬅️ Sebelumnya Pengguna", key="prev_page_user_no_data", disabled=st.session_state["user_page"] == 0):
+                st.session_state["user_page"] -= 1
+                st.rerun()
+        with col_next:
+             st.button("Selanjutnya ➡️ Pengguna", key="next_page_user_no_data", disabled=True)
+        return
+
+    # Convert to DataFrame
+    df = pd.DataFrame(response.data)
+
+    # Rename columns for better readability
+    df = df.rename(columns={
+        "id": "ID Pengguna",
+        "name": "Nama Pengguna",
+        "email": "Email",
+        "created_at": "Tanggal Ditambahkan"
+    })
+
+    # Format date
+    df["Tanggal Ditambahkan"] = pd.to_datetime(df["Tanggal Ditambahkan"], format='ISO8601', errors='coerce').dt.strftime("%d %B %Y - %H:%M")
+    df.set_index("ID Pengguna", inplace=True)
+
+    # Search functionality
+    search = st.text_input("🔍 Cari pengguna berdasarkan nama atau email", "")
+    if search:
+        df = df[
+            df["Nama Pengguna"].str.lower().str.contains(search.lower(), na=False) |
+            df["Email"].str.lower().str.contains(search.lower(), na=False)
+        ]
+
+    if df.empty:
+        st.info(" Tidak ada pengguna yang ditemukan.")
+        # Pagination controls below the message even if no data
+        col_prev, col_next = st.columns(2)
+        with col_prev:
+            if st.button("⬅️ Sebelumnya Pengguna Filtered", key="prev_page_user_filtered_no_data", disabled=st.session_state["user_page"] == 0):
+                st.session_state["user_page"] -= 1
+                st.rerun()
+        with col_next:
+             st.button("Selanjutnya ➡️ Pengguna Filtered", key="next_page_user_filtered_no_data", disabled=True)
+        return
+
+    # Define columns for the table header
+    col_widths = [1, 3, 3, 2, 1] # Adjust widths as needed
+    cols = st.columns(col_widths)
+
+    # Display header row
+    headers = ["ID Pengguna", "Nama Pengguna", "Email", "Tanggal Ditambahkan", "Aksi"]
+    for col, header in zip(cols, headers):
+        col.markdown(f"**{header}**") # Make header bold
+
+    st.markdown("---") # Add a separator after the header
+
+    # Display data rows
+    for index, row in df.iterrows():
+        row_cols = st.columns(col_widths)
+        row_cols[0].write(index) # ID Pengguna
+        row_cols[1].write(row["Nama Pengguna"])
+        row_cols[2].write(row["Email"])
+        row_cols[3].write(row["Tanggal Ditambahkan"])
+
+        # Add Edit button in the last column
+        with row_cols[4]:
+            if st.button("✏️ Edit", key=f"edit_button_{index}"):
+                st.session_state["edit_user_id"] = index
+                st.rerun()
+
+    # Add pagination controls
+    col_prev, col_next = st.columns(2)
+    with col_prev:
+        if st.button("⬅️ Sebelumnya Pengguna", key="prev_page_user", disabled=st.session_state["user_page"] == 0):
+            st.session_state["user_page"] -= 1
+            st.rerun()
+    with col_next:
+         is_last_page = len(df) < page_size
+         if st.button("Selanjutnya ➡️ Pengguna", key="next_page_user", disabled=is_last_page):
+             st.session_state["user_page"] += 1
+             st.rerun()
 
 # Fungsi untuk menambah pesanan
 def add_order(data):
