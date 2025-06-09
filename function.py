@@ -369,34 +369,6 @@ def status_pengiriman():
     if status_filter != "Semua":
         df = df[df["Status Pengiriman"] == status_filter]
 
-    # --- PERBAIKAN DIMULAI DI SINI ---
-    # Sebelum mengecek df.empty, pastikan indeks direset
-    # Ini penting karena set_index("Order ID") mungkin membuat indeks tidak unik
-    # jika ada order_id yang sama setelah filtering.
-    # Namun, kita tidak perlu set_index("Order ID") jika kita hanya ingin menampilkannya
-    # dan styling akan bekerja pada indeks default yang unik.
-
-    # Jika Anda ingin tetap menampilkan "Order ID" sebagai kolom, tidak perlu set_index.
-    # Jika Anda ingin "Order ID" sebagai indeks yang ditampilkan di Streamlit,
-    # pastikan kolom tersebut unik atau reset indeks setelah filtering.
-    # Saya akan mengasumsikan Anda ingin styling berfungsi, jadi kita akan reset indeks
-    # atau biarkan indeks default sejak awal.
-
-    # Option 1: Buang baris df.set_index("Order ID", inplace=True) sama sekali
-    # karena Anda hanya ingin menampilkan data dan styling. Ini paling sederhana.
-    # df.set_index("Order ID", inplace=True) <--- HAPUS BARIS INI
-
-    # Option 2: Jika Anda tetap ingin "Order ID" sebagai indeks, tapi memastikan unik untuk styling:
-    # Anda bisa membiarkan set_index("Order ID"), tapi pastikan ada reset_index()
-    # setelah filtering jika ada kemungkinan duplikat setelah filter.
-    # Namun, untuk kasus Anda, membuang set_index("Order ID") adalah cara paling bersih
-    # jika Anda tidak memiliki kebutuhan spesifik untuk itu sebagai indeks internal Styler.
-
-    # Mari kita gunakan solusi yang paling aman dan sederhana:
-    # Hapus df.set_index("Order ID", inplace=True)
-    # Dan jika Anda tetap ingin tampilan "Order ID" di paling kiri (seperti indeks),
-    # Anda bisa memastikan itu adalah kolom pertama.
-
     if df.empty:
         st.info("📭 Tidak ada pengiriman dengan status tersebut.")
         return
@@ -701,6 +673,10 @@ def tampilkan_pembayaran():
     # Tampilkan tabel
     st.dataframe(df, use_container_width=True)
 
+import streamlit as st
+import pandas as pd
+# Assume 'supabase' is already defined and imported globally or passed in
+
 def tampilkan_pengiriman():
     st.subheader("🚚 Daftar Pengiriman")
 
@@ -729,9 +705,6 @@ def tampilkan_pengiriman():
     })
 
     # --- PERBAIKAN DATE FORMATTING ---
-    # Gunakan errors='coerce' untuk mengubah nilai yang tidak valid menjadi NaT (Not a Time)
-    # Gunakan 'ISO8601' atau biarkan Pandas inferensikan secara otomatis
-    # Ini lebih tangguh terhadap variasi kecil dalam format waktu dari database
     df["Estimasi Tiba"] = pd.to_datetime(df["Estimasi Tiba"], errors='coerce')
     df["Tanggal Ditambahkan"] = pd.to_datetime(df["Tanggal Ditambahkan"], errors='coerce')
 
@@ -740,12 +713,6 @@ def tampilkan_pengiriman():
     df["Estimasi Tiba"] = df["Estimasi Tiba"].dt.strftime("%d %B %Y").fillna("")
     df["Tanggal Ditambahkan"] = df["Tanggal Ditambahkan"].dt.strftime("%d %B %Y - %H:%M").fillna("")
 
-    # --- PERTIMBANGAN INDEX ---
-    # Jika Anda tidak berencana untuk menggunakan Styler.apply/map dengan indeks ini,
-    # atau jika Anda ingin memastikan styler kompatibilitas,
-    # sebaiknya hindari set_index jika Order ID tidak dijamin unik setelah filter.
-    # Namun, karena 'id' dari Supabase umumnya unik, `set_index("ID Pengiriman", inplace=True)`
-    # seharusnya aman untuk kasus ini. Saya akan pertahankan baris ini karena ID unik.
     df.set_index("ID Pengiriman", inplace=True)
 
 
@@ -1096,7 +1063,7 @@ def shipment_form():
                 "status": status
             }
             add_shipment(data)
-            
+                       
 # Fungsi untuk mendapatkan daftar kayu yang tersedia
 def get_available_wood():
     response = supabase.table('warehouse_stock')\
