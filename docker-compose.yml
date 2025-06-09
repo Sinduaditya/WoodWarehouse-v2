@@ -1,0 +1,12 @@
+services:
+  frontend:
+    build: .  # Ubah dari ./frontend ke . (root directory)
+    container_name: project-frontend
+    ports:
+      - "8501:8501"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

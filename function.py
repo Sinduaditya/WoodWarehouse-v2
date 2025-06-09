@@ -364,10 +364,38 @@ def status_pengiriman():
 
     # Pilihan filter status pengiriman
     status_filter = st.selectbox("Filter Status Pengiriman", ["Semua", "In Transit", "Delivered", "Failed"])
-    df.set_index("Order ID", inplace=True)
+
     # Terapkan filter jika tidak memilih "Semua"
     if status_filter != "Semua":
         df = df[df["Status Pengiriman"] == status_filter]
+
+    # --- PERBAIKAN DIMULAI DI SINI ---
+    # Sebelum mengecek df.empty, pastikan indeks direset
+    # Ini penting karena set_index("Order ID") mungkin membuat indeks tidak unik
+    # jika ada order_id yang sama setelah filtering.
+    # Namun, kita tidak perlu set_index("Order ID") jika kita hanya ingin menampilkannya
+    # dan styling akan bekerja pada indeks default yang unik.
+
+    # Jika Anda ingin tetap menampilkan "Order ID" sebagai kolom, tidak perlu set_index.
+    # Jika Anda ingin "Order ID" sebagai indeks yang ditampilkan di Streamlit,
+    # pastikan kolom tersebut unik atau reset indeks setelah filtering.
+    # Saya akan mengasumsikan Anda ingin styling berfungsi, jadi kita akan reset indeks
+    # atau biarkan indeks default sejak awal.
+
+    # Option 1: Buang baris df.set_index("Order ID", inplace=True) sama sekali
+    # karena Anda hanya ingin menampilkan data dan styling. Ini paling sederhana.
+    # df.set_index("Order ID", inplace=True) <--- HAPUS BARIS INI
+
+    # Option 2: Jika Anda tetap ingin "Order ID" sebagai indeks, tapi memastikan unik untuk styling:
+    # Anda bisa membiarkan set_index("Order ID"), tapi pastikan ada reset_index()
+    # setelah filtering jika ada kemungkinan duplikat setelah filter.
+    # Namun, untuk kasus Anda, membuang set_index("Order ID") adalah cara paling bersih
+    # jika Anda tidak memiliki kebutuhan spesifik untuk itu sebagai indeks internal Styler.
+
+    # Mari kita gunakan solusi yang paling aman dan sederhana:
+    # Hapus df.set_index("Order ID", inplace=True)
+    # Dan jika Anda tetap ingin tampilan "Order ID" di paling kiri (seperti indeks),
+    # Anda bisa memastikan itu adalah kolom pertama.
 
     if df.empty:
         st.info("📭 Tidak ada pengiriman dengan status tersebut.")
@@ -376,13 +404,14 @@ def status_pengiriman():
     # Fungsi untuk memberi warna berdasarkan status pengiriman
     def highlight_status(val):
         warna = {
-            "Delivered": "background-color: #a5d6a7; color: black;",  # Hijau
-            "In Transit": "background-color: #fff59d; color: black;",  # Kuning
-            "Failed": "background-color: #ef9a9a; color: black;",  # Merah
+            "Delivered": "background-color: #a5d6a7; color: black;",   # Hijau
+            "In Transit": "background-color: #fff59d; color: black;",   # Kuning
+            "Failed": "background-color: #ef9a9a; color: black;",   # Merah
         }
         return warna.get(val, "")
 
     # Terapkan styling pada kolom "Status Pengiriman"
+    # Sekarang, styled_df akan menggunakan indeks default yang unik.
     styled_df = df.style.applymap(highlight_status, subset=["Status Pengiriman"])
 
     # Tampilkan tabel
@@ -699,10 +728,27 @@ def tampilkan_pengiriman():
         "created_at": "Tanggal Ditambahkan"
     })
 
-    # Format tanggal
-    df["Estimasi Tiba"] = pd.to_datetime(df["Estimasi Tiba"]).dt.strftime("%d %B %Y")
-    df["Tanggal Ditambahkan"] = pd.to_datetime(df["Tanggal Ditambahkan"]).dt.strftime("%d %B %Y - %H:%M")
+    # --- PERBAIKAN DATE FORMATTING ---
+    # Gunakan errors='coerce' untuk mengubah nilai yang tidak valid menjadi NaT (Not a Time)
+    # Gunakan 'ISO8601' atau biarkan Pandas inferensikan secara otomatis
+    # Ini lebih tangguh terhadap variasi kecil dalam format waktu dari database
+    df["Estimasi Tiba"] = pd.to_datetime(df["Estimasi Tiba"], errors='coerce')
+    df["Tanggal Ditambahkan"] = pd.to_datetime(df["Tanggal Ditambahkan"], errors='coerce')
+
+    # Format tanggal yang sudah dikonversi
+    # Pastikan untuk hanya memformat nilai non-NaT
+    df["Estimasi Tiba"] = df["Estimasi Tiba"].dt.strftime("%d %B %Y").fillna("")
+    df["Tanggal Ditambahkan"] = df["Tanggal Ditambahkan"].dt.strftime("%d %B %Y - %H:%M").fillna("")
+
+    # --- PERTIMBANGAN INDEX ---
+    # Jika Anda tidak berencana untuk menggunakan Styler.apply/map dengan indeks ini,
+    # atau jika Anda ingin memastikan styler kompatibilitas,
+    # sebaiknya hindari set_index jika Order ID tidak dijamin unik setelah filter.
+    # Namun, karena 'id' dari Supabase umumnya unik, `set_index("ID Pengiriman", inplace=True)`
+    # seharusnya aman untuk kasus ini. Saya akan pertahankan baris ini karena ID unik.
     df.set_index("ID Pengiriman", inplace=True)
+
+
     # Filter status pengiriman
     status_filter = st.selectbox("Filter Status Pengiriman", ["Semua", "In Transit", "Delivered", "Failed"])
     if status_filter != "Semua":
@@ -894,7 +940,7 @@ def tambah_supplier():
                 try:
                     response = supabase.table("suppliers").insert(data).execute()
                     if response:
-                        st.success(f"✅ Supplier **{name}** berhasil ditambahkan!")
+                        st.success(f"✅ Supplier {name} berhasil ditambahkan!")
                 except Exception as e:
                     st.error(f"❌ Terjadi kesalahan: {e}")
 
@@ -997,10 +1043,21 @@ def get_orders():
 
 def add_shipment(data):
     try:
-        # Insert data into the "shipments" table
+        # Cek apakah tracking_number sudah ada
+        existing_shipment = supabase.table("shipments") \
+            .select("id") \
+            .eq("tracking_number", data["tracking_number"]) \
+            .limit(1) \
+            .execute()
+
+        if existing_shipment.data:
+            st.error(f"❌ Nomor Resi '{data['tracking_number']}' sudah ada. Harap gunakan nomor resi yang berbeda.")
+            return # Hentikan fungsi jika ditemukan duplikat
+
+        # Masukkan data ke tabel "shipments"
         response = supabase.table("shipments").insert(data).execute()
         if response.data:
-            st.success(f"✅ Data berhasil ditambahkan: {data}")
+            st.success(f"✅ Data berhasil ditambahkan.")
         else:
             st.error("❌ Gagal menambahkan data ke database.")
     except Exception as e:
@@ -1013,22 +1070,24 @@ def shipment_form():
 
     with st.form("shipment_form"):
         order_id = st.selectbox(
-            "Order ID", 
-            list(orders.keys()), 
-            index=0, 
-            format_func=lambda x: x, 
+            "Order ID",
+            list(orders.keys()),
+            index=0,
+            format_func=lambda x: x,
             placeholder="Cari Order ID..."
         )
-        # Generate tracking number dynamically based on selected order ID
-        tracking_number = st.text_input("Nomor Resi", value="TRK000", placeholder="Masukkan nomor resi")
-
-        # Select shipping company from predefined options
+        tracking_number = st.text_input("Nomor Resi", value="", placeholder="Masukkan nomor resi unik") # Hapus nilai default
+        
         shipping_company = st.selectbox("Perusahaan Pengiriman", ["POS Indonesia", "JNE", "TIKI"])
         estimated_delivery = st.date_input("Perkiraan Tanggal Tiba")
         status = st.selectbox("Status", ["In Transit", "Delivered", "Failed"])
         submit_button = st.form_submit_button("Tambah Pengiriman")
 
         if submit_button:
+            if not tracking_number: # Validasi dasar untuk input kosong
+                st.error("Nomor Resi tidak boleh kosong.")
+                return
+            
             data = {
                 "order_id": orders[order_id],
                 "tracking_number": tracking_number,
@@ -1037,7 +1096,7 @@ def shipment_form():
                 "status": status
             }
             add_shipment(data)
-
+            
 # Fungsi untuk mendapatkan daftar kayu yang tersedia
 def get_available_wood():
     response = supabase.table('warehouse_stock')\
