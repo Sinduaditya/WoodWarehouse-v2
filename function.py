@@ -359,13 +359,13 @@ def status_pengiriman():
         "created_at": "Waktu Pengiriman"
     })
 
-    # Format tanggal
-    df["Estimasi Tiba"] = pd.to_datetime(df["Estimasi Tiba"], format='ISO8601', errors='coerce').dt.strftime("%d %B %Y")
-    df["Waktu Pengiriman"] = pd.to_datetime(df["Waktu Pengiriman"], format='ISO8601', errors='coerce').dt.strftime("%d %B %Y - %H:%M")
+    # Format tanggal agar lebih mudah dibaca
+    df["Estimasi Tiba"] = pd.to_datetime(df["Estimasi Tiba"]).dt.strftime("%d %B %Y")
+    df["Waktu Pengiriman"] = pd.to_datetime(df["Waktu Pengiriman"]).dt.strftime("%d %B %Y - %H:%M")
 
     # Pilihan filter status pengiriman
     status_filter = st.selectbox("Filter Status Pengiriman", ["Semua", "In Transit", "Delivered", "Failed"])
-    
+
     # Terapkan filter jika tidak memilih "Semua"
     if status_filter != "Semua":
         df = df[df["Status Pengiriman"] == status_filter]
@@ -377,16 +377,17 @@ def status_pengiriman():
     # Fungsi untuk memberi warna berdasarkan status pengiriman
     def highlight_status(val):
         warna = {
-            "Delivered": "background-color: #a5d6a7; color: black;",  # Hijau
-            "In Transit": "background-color: #fff59d; color: black;",  # Kuning
-            "Failed": "background-color: #ef9a9a; color: black;",  # Merah
+            "Delivered": "background-color: #a5d6a7; color: black;",   # Hijau
+            "In Transit": "background-color: #fff59d; color: black;",   # Kuning
+            "Failed": "background-color: #ef9a9a; color: black;",   # Merah
         }
         return warna.get(val, "")
 
     # Terapkan styling pada kolom "Status Pengiriman"
+    # Sekarang, styled_df akan menggunakan indeks default yang unik.
     styled_df = df.style.applymap(highlight_status, subset=["Status Pengiriman"])
 
-    # Tampilkan tabel dengan Order ID sebagai kolom biasa
+    # Tampilkan tabel
     st.dataframe(styled_df, use_container_width=True)
 
 def tampilkan_detail_pesanan(order_id):
@@ -1053,34 +1054,21 @@ def tampilkan_pembayaran():
              st.session_state["pembayaran_page"] += 1
              st.rerun()
 
+import streamlit as st
+import pandas as pd
+# Assume 'supabase' is already defined and imported globally or passed in
+
 def tampilkan_pengiriman():
     st.subheader("🚚 Daftar Pengiriman")
-
-    # Pagination setup
-    page_size = 20  # Changed to 20 items per page
-    if "pengiriman_page" not in st.session_state:
-        st.session_state["pengiriman_page"] = 0
-
-    offset = st.session_state["pengiriman_page"] * page_size
 
     # Query untuk mengambil data shipments
     response = supabase.table("shipments")\
         .select("id, order_id, tracking_number, shipping_company, estimated_delivery, status, created_at")\
         .order("created_at", desc=True)\
-        .limit(page_size)\
-        .offset(offset)\
         .execute()
 
     if not response.data:
         st.info("📭 Belum ada data pengiriman.")
-        # Pagination controls below the message
-        col_prev, col_next = st.columns(2)
-        with col_prev:
-            if st.button("⬅️ Sebelumnya Pengiriman", key="prev_page_pengiriman_no_data", disabled=st.session_state["pengiriman_page"] == 0):
-                st.session_state["pengiriman_page"] -= 1
-                st.rerun()
-        with col_next:
-             st.button("Selanjutnya ➡️ Pengiriman", key="next_page_pengiriman_no_data", disabled=True)
         return
 
     # Konversi ke DataFrame
@@ -1097,76 +1085,29 @@ def tampilkan_pengiriman():
         "created_at": "Tanggal Ditambahkan"
     })
 
-    # Format tanggal
-    df["Estimasi Tiba"] = pd.to_datetime(df["Estimasi Tiba"], format='ISO8601', errors='coerce').dt.strftime("%d %B %Y")
-    df["Tanggal Ditambahkan"] = pd.to_datetime(df["Tanggal Ditambahkan"], format='ISO8601', errors='coerce').dt.strftime("%d %B %Y - %H:%M")
+    df["Estimasi Tiba"] = pd.to_datetime(df["Estimasi Tiba"], errors='coerce')
+    df["Tanggal Ditambahkan"] = pd.to_datetime(df["Tanggal Ditambahkan"], errors='coerce')
+
+    # Format tanggal yang sudah dikonversi
+    # Pastikan untuk hanya memformat nilai non-NaT
+    df["Estimasi Tiba"] = df["Estimasi Tiba"].dt.strftime("%d %B %Y").fillna("")
+    df["Tanggal Ditambahkan"] = df["Tanggal Ditambahkan"].dt.strftime("%d %B %Y - %H:%M").fillna("")
+
     df.set_index("ID Pengiriman", inplace=True)
 
-    # Create two columns for filters
-    col1, col2 = st.columns(2)
-    
-    # Filter status pengiriman
-    with col1:
-        status_filter = st.selectbox("Filter Status Pengiriman", ["Semua", "In Transit", "Delivered", "Failed"])
-    
-    # Filter perusahaan pengiriman
-    with col2:
-        # Get unique shipping companies and add "Semua" option
-        shipping_companies = ["Semua"] + sorted(df["Perusahaan Pengiriman"].dropna().unique().tolist())
-        company_filter = st.selectbox("Filter Perusahaan Pengiriman", shipping_companies)
 
-    # Apply filters
+    # Filter status pengiriman
+    status_filter = st.selectbox("Filter Status Pengiriman", ["Semua", "In Transit", "Delivered", "Failed"])
     if status_filter != "Semua":
         df = df[df["Status"] == status_filter]
-    if company_filter != "Semua":
-        df = df[df["Perusahaan Pengiriman"] == company_filter]
 
     if df.empty:
-        st.info("📭 Tidak ada pengiriman dengan filter yang dipilih.")
-        # Pagination controls below the message even if no data
-        col_prev, col_next = st.columns(2)
-        with col_prev:
-            if st.button("⬅️ Sebelumnya Pengiriman Filtered", key="prev_page_pengiriman_filtered_no_data", disabled=st.session_state["pengiriman_page"] == 0):
-                st.session_state["pengiriman_page"] -= 1
-                st.rerun()
-        with col_next:
-             st.button("Selanjutnya ➡️ Pengiriman Filtered", key="next_page_pengiriman_filtered_no_data", disabled=True)
+        st.info("📭 Tidak ada pengiriman dengan status tersebut.")
         return
 
-    # Define columns for the table header
-    col_widths = [1, 2, 2, 2, 2, 2, 2] # Adjust widths as needed
-    cols = st.columns(col_widths)
-
-    # Display header row
-    headers = ["ID Pengiriman", "ID Order", "No. Resi", "Perusahaan Pengiriman", "Estimasi Tiba", "Status", "Tanggal Ditambahkan"]
-    for col, header in zip(cols, headers):
-        col.markdown(f"**{header}**") # Make header bold
-
-    st.markdown("---") # Add a separator after the header
-
-    # Display data rows
-    for index, row in df.iterrows():
-        row_cols = st.columns(col_widths)
-        row_cols[0].write(index) # ID Pengiriman
-        row_cols[1].write(row["ID Order"])
-        row_cols[2].write(row["No. Resi"])
-        row_cols[3].write(row["Perusahaan Pengiriman"])
-        row_cols[4].write(row["Estimasi Tiba"])
-        row_cols[5].write(row["Status"])
-        row_cols[6].write(row["Tanggal Ditambahkan"])
-
-    # Add pagination controls
-    col_prev, col_next = st.columns(2)
-    with col_prev:
-        if st.button("⬅️ Sebelumnya Pengiriman", key="prev_page_pengiriman", disabled=st.session_state["pengiriman_page"] == 0):
-            st.session_state["pengiriman_page"] -= 1
-            st.rerun()
-    with col_next:
-         is_last_page = len(df) < page_size
-         if st.button("Selanjutnya ➡️ Pengiriman", key="next_page_pengiriman", disabled=is_last_page):
-             st.session_state["pengiriman_page"] += 1
-             st.rerun()
-
+    # Tampilkan tabel
+    st.dataframe(df, use_container_width=True)
+    
 def get_category_quantity():
     # Query ke Supabase untuk mendapatkan total quantity berdasarkan kategori kayu
     response = supabase.table("warehouse_stock")\
@@ -1449,10 +1390,21 @@ def get_orders():
 
 def add_shipment(data):
     try:
-        # Insert data into the "shipments" table
+        # Cek apakah tracking_number sudah ada
+        existing_shipment = supabase.table("shipments") \
+            .select("id") \
+            .eq("tracking_number", data["tracking_number"]) \
+            .limit(1) \
+            .execute()
+
+        if existing_shipment.data:
+            st.error(f"❌ Nomor Resi '{data['tracking_number']}' sudah ada. Harap gunakan nomor resi yang berbeda.")
+            return # Hentikan fungsi jika ditemukan duplikat
+
+        # Masukkan data ke tabel "shipments"
         response = supabase.table("shipments").insert(data).execute()
         if response.data:
-            st.success(f"✅ Data berhasil ditambahkan: {data}")
+            st.success(f"✅ Data berhasil ditambahkan.")
         else:
             st.error("❌ Gagal menambahkan data ke database.")
     except Exception as e:
@@ -1465,22 +1417,24 @@ def shipment_form():
 
     with st.form("shipment_form"):
         order_id = st.selectbox(
-            "Order ID", 
-            list(orders.keys()), 
-            index=0, 
-            format_func=lambda x: x, 
+            "Order ID",
+            list(orders.keys()),
+            index=0,
+            format_func=lambda x: x,
             placeholder="Cari Order ID..."
         )
-        # Generate tracking number dynamically based on selected order ID
-        tracking_number = st.text_input("Nomor Resi", value="TRK000", placeholder="Masukkan nomor resi")
-
-        # Select shipping company from predefined options
+        tracking_number = st.text_input("Nomor Resi", value="", placeholder="Masukkan nomor resi unik") # Hapus nilai default
+        
         shipping_company = st.selectbox("Perusahaan Pengiriman", ["POS Indonesia", "JNE", "TIKI"])
         estimated_delivery = st.date_input("Perkiraan Tanggal Tiba")
         status = st.selectbox("Status", ["In Transit", "Delivered", "Failed"])
         submit_button = st.form_submit_button("Tambah Pengiriman")
 
         if submit_button:
+            if not tracking_number: # Validasi dasar untuk input kosong
+                st.error("Nomor Resi tidak boleh kosong.")
+                return
+            
             data = {
                 "order_id": orders[order_id],
                 "tracking_number": tracking_number,
@@ -1489,7 +1443,7 @@ def shipment_form():
                 "status": status
             }
             add_shipment(data)
-
+            
 # Fungsi untuk mendapatkan daftar kayu yang tersedia
 def get_available_wood():
     response = supabase.table('warehouse_stock')\
