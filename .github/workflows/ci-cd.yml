@@ -3,10 +3,10 @@ name: CI/CD for Streamlit App
 on:
   push:
     branches:
-      - main # Jalankan workflow setiap kali ada push ke branch `main`
+      - jovan # Jalankan workflow setiap kali ada push ke branch `main`
   pull_request:
     branches:
-      - main # Jalankan workflow untuk pull request ke branch `main`
+      - jovan # Jalankan workflow untuk pull request ke branch `main`
 
 jobs:
   test-and-deploy:
